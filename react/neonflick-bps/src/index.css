@@ -1,0 +1,71 @@
+:root {
+  --neon: #00ffff;
+  --bg: #050b12;
+  --bg-dark: #02060a;
+  --text: #e6ffff;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Segoe UI", monospace;
+}
+
+body {
+  background: radial-gradient(circle at top, #07121f, var(--bg-dark));
+  color: var(--text);
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  background: rgba(5, 11, 18, 0.9);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--neon);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+}
+
+.logo {
+  color: var(--neon);
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px var(--neon);
+}
+
+.nav a {
+  color: var(--neon);
+  margin-left: 30px;
+  text-decoration: none;
+  font-weight: 500;
+  position: relative;
+}
+
+.nav a::after {
+  content: "";
+  position: absolute;
+  width: 0;
+  height: 2px;
+  background: var(--neon);
+  left: 0;
+  bottom: -5px;
+  transition: 0.3s;
+}
+
+.nav a:hover::after {
+  width: 100%;
+}
+
+.section {
+  min-height: 100vh;
+  padding: 100px 40px;
+  border-bottom: 1px solid rgba(0, 255, 255, 0.15);
+}
+
+.section h2 {
+  color: var(--neon);
+  text-shadow: 0 0 8px var(--neon);
+  margin-bottom: 20px;
+}

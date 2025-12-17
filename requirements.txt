@@ -6,3 +6,5 @@ requests==2.31.0
 python-dotenv==1.1.1
 solana==0.28.0
 construct==2.10.67
+pyjwt
+boto3

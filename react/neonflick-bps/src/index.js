@@ -1,11 +1,16 @@
+// ================== index.js ==================
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import { WalletAuthProvider } from "./components/WalletAuthContext";
 import "./index.css";
+
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+<React.StrictMode>
+<WalletAuthProvider>
+<App />
+</WalletAuthProvider>
+</React.StrictMode>
 );

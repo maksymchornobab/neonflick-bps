@@ -11,6 +11,7 @@ import io
 import logging
 import boto3
 from botocore.exceptions import ClientError
+from bson.objectid import ObjectId
 
 # ---------------- CONFIG ----------------
 load_dotenv()
@@ -146,7 +147,7 @@ def create_product():
         return jsonify({"error": "invalid price"}), 400
 
     if price < 0.001 or price > 1_000_000:
-        return jsonify({"error": "invalid price"}), 400
+        return jsonify({"error": "invalid price (0.001 - 1,000,000)"}), 400
 
     # ---------- AWS S3 UPLOAD ----------
     try:
@@ -187,7 +188,55 @@ def create_product():
         "image": image_url
     })
 
+@app.route("/products", methods=["GET"])
+def get_products():
+    items = products.find().sort("created_at", -1)
 
+    result = []
+    for item in items:
+        result.append({
+            "wallet": item.get("wallet"),
+            "id": str(item["_id"]),
+            "title": item.get("title"),
+            "description": item.get("description"),
+            "price": item.get("price"),
+            "currency": item.get("currency"),
+            "image": item.get("image"),
+            "created_at": item.get("created_at")
+        })
+
+    return jsonify({
+        "products": result
+    })
+
+@app.route("/delete-product", methods=["POST"])
+def delete_product():
+    data = request.json
+    product_id = data.get("id")
+    s3_key = data.get("s3_key")  # ключ файлу на S3, напр. "products/filename.jpg"
+
+    if not product_id or not s3_key:
+        return jsonify({"error": "Missing id or s3_key"}), 400
+
+    try:
+        # Конвертуємо рядок у ObjectId
+        mongo_id = ObjectId(product_id)
+    except Exception as e:
+        return jsonify({"error": "Invalid product id"}), 400
+
+    # 1. Видалити з MongoDB
+    result = products.delete_one({"_id": mongo_id})
+
+    if result.deleted_count == 0:
+        return jsonify({"error": "Product not found"}), 404
+
+    # 2. Видалити файл з S3
+    try:
+        s3.delete_object(Bucket=AWS_BUCKET, Key=s3_key)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    return jsonify({"success": True})
 
 if __name__ == "__main__":
     app.run(debug=True)

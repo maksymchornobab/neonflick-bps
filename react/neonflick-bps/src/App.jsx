@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Header from "./components/Header";
 import CreateSection from "./components/CreateSection";
 import ProductsSection from "./components/ProductsSection";
@@ -8,7 +9,9 @@ import "./index.css";
 export default function App() {
   const { user, loading } = useWalletAuth();
 
-  // 🔁 Поки триває відновлення сесії
+  // 👇 яка секція активна
+  const [activeSection, setActiveSection] = useState("products");
+
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-black">
@@ -17,7 +20,6 @@ export default function App() {
     );
   }
 
-  // Wallet NOT connected → show only connect button
   if (!user) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-black">
@@ -26,13 +28,16 @@ export default function App() {
     );
   }
 
-  // Wallet connected → full app
   return (
     <>
-      <Header />
+      <Header
+        activeSection={activeSection}
+        setActiveSection={setActiveSection}
+      />
+
       <main>
-        <CreateSection />
-        <ProductsSection />
+        {activeSection === "products" && <ProductsSection />}
+        {activeSection === "create" && <CreateSection />}
       </main>
     </>
   );

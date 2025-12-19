@@ -238,5 +238,49 @@ def delete_product():
 
     return jsonify({"success": True})
 
+@app.route("/update_product", methods=["POST"])
+def update_product():
+    data = request.form
+    product_id = data.get("id")
+
+    product = products.find_one({"_id": ObjectId(product_id)})
+    if not product:
+        return jsonify({"error": "Product not found"}), 404
+
+    update_data = {
+        "title": data["title"],
+        "description": data["description"],
+        "price": float(data["price"]),
+        "currency": data["currency"],
+    }
+
+    # Якщо замінюють картинку
+    if "image" in request.files:
+        old_image_url = data.get("old_image")
+        if old_image_url:
+            old_key = "/".join(old_image_url.split("/")[-2:])
+            s3.delete_object(Bucket=AWS_BUCKET, Key=old_key)
+
+        file = request.files["image"]
+        filename = f"products/{uuid.uuid4()}_{file.filename}"
+        s3.upload_fileobj(
+    file,
+    AWS_BUCKET,
+    filename,
+    ExtraArgs={
+        "ContentType": file.content_type
+    }
+)
+
+        update_data["image"] = f"https://{AWS_BUCKET}.s3.{AWS_REGION}.amazonaws.com/{filename}"
+
+    products.update_one(
+        {"_id": ObjectId(product_id)},
+        {"$set": update_data}
+    )
+
+    return jsonify({"success": True})
+
+
 if __name__ == "__main__":
     app.run(debug=True)

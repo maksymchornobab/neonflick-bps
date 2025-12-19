@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-export default function ProductsSection() {
+export default function ProductsSection({ onEdit }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openMenuId, setOpenMenuId] = useState(null); // Для відкриття меню конкретного продукту
@@ -19,7 +19,10 @@ export default function ProductsSection() {
     setOpenMenuId(openMenuId === id ? null : id);
   };
 
-  const handleEdit = (product) => alert(`Edit ${product.title}`);
+  const handleEdit = (product) => {
+  onEdit(product);
+};
+
   const handleDelete = async (product) => {
 
   try {

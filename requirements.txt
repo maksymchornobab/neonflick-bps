@@ -8,3 +8,9 @@ solana==0.28.0
 construct==2.10.67
 pyjwt
 boto3
+web3modal 
+ethers 
+@solana/web3.js 
+@solana/wallet-adapter-base 
+@solana/wallet-adapter-react 
+@solana/wallet-adapter-wallets

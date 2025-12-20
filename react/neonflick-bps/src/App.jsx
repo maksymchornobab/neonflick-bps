@@ -3,7 +3,6 @@ import Header from "./components/Header";
 import CreateSection from "./components/CreateSection";
 import EditSection from "./components/EditSection";
 import ProductsSection from "./components/ProductsSection";
-import ConnectWallet from "./components/ConnectWallet";
 import { useWalletAuth } from "./components/WalletAuthContext";
 import "./index.css";
 
@@ -17,19 +16,21 @@ export default function App() {
     return <main className="center">Loading...</main>;
   }
 
-  if (!user) {
-    return <main className="center"><ConnectWallet /></main>;
-  }
-
   return (
     <>
       <Header
+        user={user}
         activeSection={activeSection}
         setActiveSection={setActiveSection}
       />
 
       <main>
-        {activeSection === "products" && (
+        {!user && (
+          <div className="center">
+          </div>
+        )}
+
+        {user && activeSection === "products" && (
           <ProductsSection
             onEdit={(product) => {
               setEditingProduct(product);
@@ -38,9 +39,9 @@ export default function App() {
           />
         )}
 
-        {activeSection === "create" && <CreateSection />}
+        {user && activeSection === "create" && <CreateSection />}
 
-        {activeSection === "edit" && editingProduct && (
+        {user && activeSection === "edit" && editingProduct && (
           <EditSection
             product={editingProduct}
             onCancel={() => setActiveSection("products")}

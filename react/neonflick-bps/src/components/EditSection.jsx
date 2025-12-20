@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useWalletAuth } from "./WalletAuthContext";
 
 export default function EditSection({ product, onCancel }) {
   const { token } = useWalletAuth();
+  const fileInputRef = useRef(null);
 
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(product.image);
@@ -28,6 +29,18 @@ export default function EditSection({ product, onCancel }) {
 
     setImage(file);
     setImagePreview(URL.createObjectURL(file));
+  };
+
+  const handleRemoveImage = () => {
+    setImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleReplaceImage = () => {
+    fileInputRef.current?.click();
   };
 
   const handlePriceChange = (e) => {
@@ -88,43 +101,59 @@ export default function EditSection({ product, onCancel }) {
   };
 
   return (
-    <section className="section">
-      <h2>Edit product</h2>
+    <section id="edit" className="section">
 
       <form className="create-form" onSubmit={handleSubmit}>
-        {/* Image */}
-        <label className="file-input">
-          <input type="file" accept="image/*" onChange={handleImageChange} />
-          <span>{image ? image.name : "Replace image (optional)"}</span>
-        </label>
-
-        {/* Preview */}
+        <h2>Edit product</h2>
         {imagePreview && (
-          <div className="image-preview">
-            <img src={imagePreview} alt="Preview" />
-          </div>
-        )}
-
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          maxLength={50}
-          required
-        />
-
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          maxLength={500}
-          required
-        />
-
-        <div className="price-row">
-          <input value={price} onChange={handlePriceChange} />
-          <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-            <option value="SOL">SOL</option>
-          </select>
+      <div className="image-preview-wrapper">
+        <div className="image-preview-frame">
+          <img src={imagePreview} alt="Preview" />
         </div>
+      </div>
+    )}
+
+    {/* FILE INPUT */}
+    <label className="file-input">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageChange}
+        required={!image}
+      />
+      <span className="file-name">
+        {image ? image.name : "Upload image"}
+      </span>
+    </label>
+
+    <input
+      placeholder="Title (max 50 symbols)"
+      value={title}
+      onChange={(e) => setTitle(e.target.value)}
+      maxLength={50}
+      required
+    />
+
+    <textarea
+      placeholder="Description (max 500 symbols)"
+      value={description}
+      onChange={(e) => setDescription(e.target.value)}
+      maxLength={500}
+      required
+    />
+
+    <div className="price-row">
+      <input 
+      value={price} 
+      onChange={handlePriceChange} 
+      required
+      placeholder="Price (0.001 - 1,000,000)" 
+      />
+      <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+        <option value="SOL">SOL</option>
+      </select>
+    </div>
 
         <div className="actions">
           <button disabled={loading}>
@@ -135,6 +164,23 @@ export default function EditSection({ product, onCancel }) {
           </button>
         </div>
       </form>
+      {imagePreview && (
+    <>
+      <button
+        type="button"
+        className="img-btn remove"
+        onClick={handleRemoveImage}
+        title="Remove image"
+      />
+
+      <button
+        type="button"
+        className="img-btn replace"
+        onClick={handleReplaceImage}
+        title="Replace image"
+      />
+    </>
+  )}
     </section>
   );
 }

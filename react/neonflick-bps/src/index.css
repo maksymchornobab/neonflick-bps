@@ -115,7 +115,6 @@ body {
 .section h2 {
   color: var(--neon);
   text-shadow: 0 0 8px var(--neon);
-  margin-bottom: 20px;
 }
 
 /* ================= WALLET BUTTON ================= */
@@ -186,11 +185,29 @@ body {
 /* ================= CREATE FORM ================= */
 
 .create-form {
+  width: 100%;
   max-width: 520px;
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
+
+/* ---------- CREATE SECTION CENTER ---------- */
+
+#create {
+  position: relative;
+  min-height: calc(100vh - 80px); /* якщо є хедер */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#create > * {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 
 .create-form input,
 .create-form textarea,
@@ -216,18 +233,67 @@ body {
 }
 
 .file-input {
+  width: 100%;
   border: 1px dashed var(--neon);
   border-radius: 14px;
   padding: 18px;
-  cursor: pointer;
   text-align: center;
+  cursor: pointer;
+  position: relative;
 }
 
 .file-input input {
   display: none;
 }
 
+.file-name {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- IMAGE ACTION BUTTONS ---------- */
+
+.img-btn {
+  position: absolute;
+  top: 320px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px dashed #00ffff;
+  cursor: pointer;
+
+  background-color: rgba(0, 0, 0, 0.65);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100%;
+
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.img-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 18px var(--neon);
+}
+
+/* 🔄 REPLACE */
+.img-btn.replace {
+  right: 345px;
+  background-image: url("components/img/change.png");
+}
+
+/* 🗑 DELETE */
+.img-btn.remove {
+  right: 300px;
+  background-image: url("components/img/delete.png");
+}
+
+
 .price-row {
+  width: 92%;
   display: flex;
   gap: 12px;
 }
@@ -243,6 +309,7 @@ body {
   border: none;
   box-shadow: 0 0 20px var(--neon);
   transition: 0.3s;
+  width: 86%;
 }
 
 .create-form button:hover {
@@ -254,6 +321,71 @@ body {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* ---------- IMAGE PREVIEW ---------- */
+
+.image-preview-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.image-preview-frame {
+  width: 320px;
+  height: 220px;
+  border-radius: 18px;
+  background: rgba(0, 255, 255, 0.06);
+  border: 1px solid rgba(0, 255, 255, 0.35);
+  box-shadow: 0 0 25px rgba(0, 255, 255, 0.25);
+  overflow: hidden;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-preview-frame img {
+  width: 320px;
+  height: 220px;
+}
+
+.image-preview-hint {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+#edit {
+  position: relative;
+  min-height: calc(100vh - 80px); /* якщо є хедер */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#edit > * {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.actions {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  align-items: center;
+}
+
+/* кнопки в один рядок без переносу тексту */
+.actions button {
+  flex: 1;
+  min-width: max-content;   /* 🔒 ширина під текст */
+  white-space: nowrap;      /* ❌ заборона переносу */
+  padding: 14px 20px;       /* трохи більше простору */
+  text-align: center;
+}
+
+
 
 /* STATES */
 .products-loading,
@@ -268,7 +400,7 @@ body {
 .section {
   max-width: 1300px;
   margin: 0 auto;
-  padding: 40px 12px;
+  padding: 2px 12px;
   justify-content: center; /* горизонтальне вирівнювання всіх колонок */
   align-items: start;
 }
@@ -278,7 +410,8 @@ body {
   color: var(--neon);
   font-size: 2rem;
   letter-spacing: 4px;
-  margin-bottom: 60px;
+  margin-bottom: 20px;
+  margin-top: 10px;
 }
 
 /* GRID */

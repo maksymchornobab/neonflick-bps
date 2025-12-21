@@ -12,6 +12,9 @@ import logging
 import boto3
 from botocore.exceptions import ClientError
 from bson.objectid import ObjectId
+import requests
+import time
+import threading
 
 # ---------------- CONFIG ----------------
 load_dotenv()
@@ -26,6 +29,7 @@ client = MongoClient(uri)
 db = client.get_database("neonflick-bps")
 users = db.get_collection("users")
 products = db.get_collection("products")
+expired_products = db.get_collection("expired_products")
 
 # ---------- LOGGING ----------
 logging.basicConfig(level=logging.DEBUG)
@@ -40,7 +44,8 @@ s3 = boto3.client(
     region_name=AWS_REGION,
 )
 
-
+DELETE_PRODUCT_URL = "http://127.0.0.1:5000/delete-product"  # твій існуючий роут
+CHECK_INTERVAL = 60  # перевірка кожні 60 секунд
 
 # ---------------- HELPERS ----------------
 def decode_token():
@@ -59,6 +64,49 @@ def decode_token():
     except Exception as e:
         logging.debug(f"decode_token -> failed to decode token: {e}")
         return None
+
+def calculate_sol_commission(price: float) -> float:
+    """
+    Формула комісії на SOL:
+    0.001 – 0.01   → 10%
+    0.01 – 0.1     → 5%
+    0.1 – 1        → 1%
+    1 – 100        → 0.25%
+    > 100          → 0.25 SOL fixed
+    """
+    if price < 0.01:
+        return max(price * 0.10, 0.0001)
+    elif price < 0.1:
+        return price * 0.05
+    elif price < 1:
+        return price * 0.01
+    elif price <= 100:
+        return price * 0.0025
+    else:
+        return 0.25
+
+def expired_products_checker():
+    while True:
+        try:
+            now = datetime.utcnow()
+            expired_items = products.find({"expires_at": {"$lte": now}})
+
+            for item in expired_items:
+                product_id = str(item["_id"])
+                
+                try:
+                    requests.post("http://127.0.0.1:5000/delete-product", json={"id": product_id})
+                except Exception as e:
+                    print(f"Error deleting product {product_id}: {e}")
+
+        except Exception as e:
+            print(f"Checker error: {e}")
+
+        time.sleep(60)  # перевіряємо кожні 30 секунд (налаштовується)
+        
+
+# 🔹 Запуск фоновго потоку після створення Flask app
+threading.Thread(target=expired_products_checker, daemon=True).start()
 
 
 # ---------------- ROUTES ----------------
@@ -113,6 +161,8 @@ def auth_me():
     return jsonify({"user": {"wallet": wallet}})
 
 
+
+# ---------- Роут створення продукту ----------
 @app.route("/create_product", methods=["POST"])
 def create_product():
     payload = decode_token()
@@ -129,15 +179,16 @@ def create_product():
     description = request.form.get("description")
     price = request.form.get("price")
     currency = request.form.get("currency")
-    created_at = datetime.utcnow().strftime("%d.%m.%Y")
-
+    duration_value = request.form.get("duration")  # 🔹 нове поле для тривалості
+    created_at = datetime.utcnow()
 
     logging.debug(
         f"/create_product -> received title={title}, description={description}, "
-        f"price={price}, currency={currency}, image={image}"
+        f"price={price}, currency={currency}, duration={duration_value}, image={image}"
     )
 
-    if not all([image, title, description, price, currency]):
+    # перевірки
+    if not all([image, title, description, price, currency, duration_value]):
         return jsonify({"error": "all fields required"}), 400
 
     if len(title) > 50 or len(description) > 1000:
@@ -149,7 +200,7 @@ def create_product():
         return jsonify({"error": "invalid price"}), 400
 
     if price < 0.001 or price > 9_999_999:
-        return jsonify({"error": "invalid price (0.001 - 1,000,000)"}), 400
+        return jsonify({"error": "invalid price (0.001 - 9,999,999)"}), 400
 
     # ---------- AWS S3 UPLOAD ----------
     try:
@@ -157,14 +208,11 @@ def create_product():
         file_key = f"products/{uuid.uuid4()}_{filename}"
 
         s3.upload_fileobj(
-    image,
-    AWS_BUCKET,
-    file_key,
-    ExtraArgs={
-        "ContentType": image.mimetype,
-    },
-)
-
+            image,
+            AWS_BUCKET,
+            file_key,
+            ExtraArgs={"ContentType": image.mimetype},
+        )
 
         image_url = f"https://{AWS_BUCKET}.s3.{AWS_REGION}.amazonaws.com/{file_key}"
         logging.debug(f"/create_product -> image uploaded to S3: {image_url}")
@@ -173,29 +221,90 @@ def create_product():
         logging.exception(f"/create_product -> S3 upload failed: {e}")
         return jsonify({"error": "failed to upload image"}), 500
 
+    # ---------- Розрахунок комісії ----------
+    commission = calculate_sol_commission(price)
+
+    # ---------- Розрахунок expires_at ----------
+    duration_map = {
+        "3h": timedelta(hours=3),
+        "6h": timedelta(hours=6),
+        "12h": timedelta(hours=12),
+        "1d": timedelta(days=1),
+        "3d": timedelta(days=3)
+    }
+
+    if duration_value not in duration_map:
+        return jsonify({"error": "invalid duration"}), 400
+
+    expires_at = created_at + duration_map[duration_value]
+
+    # ---------- Додавання продукту в базу ----------
     products.insert_one({
         "wallet": wallet,
         "title": title,
         "description": description,
         "price": price,
         "currency": currency,
+        "commission": commission,
+        "stats": {"status": "new", "count": 0},
         "image": image_url,
-        "created_at": created_at
+        "created_at": created_at,
+        "expires_at": expires_at
     })
 
     logging.debug("/create_product -> product saved to DB")
 
     return jsonify({
         "status": "ok",
-        "image": image_url
+        "image": image_url,
+        "commission": commission,
+        "expires_at": expires_at.isoformat()
     })
+
+# ---------- Роут для обчислення комісії на Sol ----------
+@app.route("/calculate_commission_sol", methods=["GET"])
+def calculate_commission_sol():
+    price = request.args.get("price")
+    if not price:
+        return jsonify({"error": "price required"}), 400
+    try:
+        price = float(price)
+    except ValueError:
+        return jsonify({"error": "invalid price"}), 400
+
+    if price < 0.001 or price > 9_999_999:
+        return jsonify({"error": "price out of range (0.001 - 9,999,999)"}), 400
+
+    commission = calculate_sol_commission(price)
+    commission = round(commission, 4)
+
+    return jsonify({"price": price, "commission": commission})
+
+
+
+from datetime import datetime
+from flask import jsonify
 
 @app.route("/products", methods=["GET"])
 def get_products():
     items = products.find().sort("created_at", -1)
-
     result = []
+
     for item in items:
+        created_at_raw = item.get("created_at")
+
+        # Перетворюємо у datetime, якщо це ще не рядок у потрібному форматі
+        if isinstance(created_at_raw, datetime):
+            created_at_str = created_at_raw.strftime("%d.%m.%Y")
+        else:
+            try:
+                # спробуємо розпарсити рядок у datetime
+                created_at_dt = datetime.fromisoformat(created_at_raw)
+                created_at_str = created_at_dt.strftime("%d.%m.%Y")
+            except Exception:
+                # якщо не вдалося, залишаємо як є
+                created_at_str = str(created_at_raw)
+
         result.append({
             "wallet": item.get("wallet"),
             "id": str(item["_id"]),
@@ -204,12 +313,12 @@ def get_products():
             "price": item.get("price"),
             "currency": item.get("currency"),
             "image": item.get("image"),
-            "created_at": item.get("created_at")
+            "created_at": created_at_str,
+            "expires_at": item.get("expires_at")
         })
 
-    return jsonify({
-        "products": result
-    })
+    return jsonify({"products": result})
+
 
 @app.route("/delete-product", methods=["POST"])
 def delete_product():
@@ -245,83 +354,70 @@ def update_product():
     data = request.form
     product_id = data.get("id")
 
+    if not product_id:
+        return jsonify({"error": "Product ID required"}), 400
+
     product = products.find_one({"_id": ObjectId(product_id)})
     if not product:
         return jsonify({"error": "Product not found"}), 404
 
+    # Перевірка обов'язкових полів
+    required_fields = ["title", "description", "price", "currency"]
+    for field in required_fields:
+        if field not in data:
+            return jsonify({"error": f"{field} is required"}), 400
+
+    try:
+        price = float(data["price"])
+    except ValueError:
+        return jsonify({"error": "Invalid price"}), 400
+
+    currency = data["currency"]
+    # 🔹 Розрахунок комісії тільки для SOL
+    commission = None
+    if currency.upper() == "SOL":
+        try:
+            commission = calculate_sol_commission(price)
+        except Exception as e:
+            print(f"Error calculating commission: {e}")
+            commission = None
+
     update_data = {
         "title": data["title"],
         "description": data["description"],
-        "price": float(data["price"]),
-        "currency": data["currency"],
+        "price": price,
+        "currency": currency,
+        "commission": commission,
     }
 
-    # Якщо замінюють картинку
+    # 🔹 Обробка заміни картинки
     if "image" in request.files:
         old_image_url = data.get("old_image")
         if old_image_url:
-            old_key = "/".join(old_image_url.split("/")[-2:])
-            s3.delete_object(Bucket=AWS_BUCKET, Key=old_key)
+            try:
+                old_key = "/".join(old_image_url.split("/")[-2:])
+                s3.delete_object(Bucket=AWS_BUCKET, Key=old_key)
+            except Exception as e:
+                print(f"Failed to delete old image: {e}")
 
         file = request.files["image"]
         filename = f"products/{uuid.uuid4()}_{file.filename}"
-        s3.upload_fileobj(
-    file,
-    AWS_BUCKET,
-    filename,
-    ExtraArgs={
-        "ContentType": file.content_type
-    }
-)
+        try:
+            s3.upload_fileobj(
+                file,
+                AWS_BUCKET,
+                filename,
+                ExtraArgs={"ContentType": file.content_type},
+            )
+            update_data["image"] = f"https://{AWS_BUCKET}.s3.{AWS_REGION}.amazonaws.com/{filename}"
+        except Exception as e:
+            return jsonify({"error": "Failed to upload new image"}), 500
 
-        update_data["image"] = f"https://{AWS_BUCKET}.s3.{AWS_REGION}.amazonaws.com/{filename}"
+    # 🔹 Оновлення продукту в базі
+    products.update_one({"_id": ObjectId(product_id)}, {"$set": update_data})
 
-    products.update_one(
-        {"_id": ObjectId(product_id)},
-        {"$set": update_data}
-    )
+    return jsonify({"success": True, "commission": commission})
 
-    return jsonify({"success": True})
-
-@app.route("/products/search", methods=["GET"])
-def search_products():
-    """
-    Параметри query string:
-    - q: рядок пошуку по title
-    - sort_by: "date" або "price"
-    - order: "asc" або "desc"
-    """
-    q = request.args.get("q", "").strip()
-    sort_by = request.args.get("sort_by", "date")
-    order = request.args.get("order", "desc")  # за замовчуванням новіші зверху
-
-    # Вибираємо поле для сортування
-    if sort_by == "price":
-        sort_field = "price"
-    else:
-        sort_field = "created_at"
-
-    sort_order = 1 if order == "asc" else -1
-
-    # Пошук по title з регексом, якщо q задано
-    query = {"title": {"$regex": q, "$options": "i"}} if q else {}
-
-    items = products.find(query).sort(sort_field, sort_order)
-
-    result = []
-    for item in items:
-        result.append({
-            "wallet": item.get("wallet"),
-            "id": str(item["_id"]),
-            "title": item.get("title"),
-            "description": item.get("description"),
-            "price": item.get("price"),
-            "currency": item.get("currency"),
-            "image": item.get("image"),
-            "created_at": item.get("created_at")
-        })
-
-    return jsonify({"products": result})
 
 @app.route("/delete-products", methods=["POST"])
 def delete_products():

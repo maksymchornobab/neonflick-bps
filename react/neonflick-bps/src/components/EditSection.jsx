@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useWalletAuth } from "./WalletAuthContext";
-import Notification from "./Notification"; // 🔹 імпорт Notification
+import Notification from "./Notification";
 
 export default function EditSection({ product, onCancel }) {
   const { token } = useWalletAuth();
@@ -13,9 +13,9 @@ export default function EditSection({ product, onCancel }) {
   const [description, setDescription] = useState(product.description);
   const [price, setPrice] = useState(String(product.price));
   const [currency, setCurrency] = useState(product.currency);
+  const [commission, setCommission] = useState(product.commission || null);
   const [loading, setLoading] = useState(false);
-
-  const [notification, setNotification] = useState(""); // 🔹 стан повідомлення
+  const [notification, setNotification] = useState("");
 
   // 🔹 cleanup blob URL
   useEffect(() => {
@@ -26,10 +26,35 @@ export default function EditSection({ product, onCancel }) {
     };
   }, [imagePreview]);
 
+  // 🔹 Розрахунок комісії у реальному часі при зміні ціни або валюти
+  useEffect(() => {
+    if (currency === "SOL" && price) {
+      calculateCommission(price);
+    } else {
+      setCommission(null);
+    }
+  }, [price, currency]);
+
+  const calculateCommission = async (priceValue) => {
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:5000/calculate_commission_sol?price=${priceValue}`
+      );
+      const data = await res.json();
+      if (res.ok) {
+        setCommission(data.commission);
+      } else {
+        setCommission(null);
+      }
+    } catch (err) {
+      console.error(err);
+      setCommission(null);
+    }
+  };
+
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     setImage(file);
     setImagePreview(URL.createObjectURL(file));
   };
@@ -46,10 +71,8 @@ export default function EditSection({ product, onCancel }) {
     let value = e.target.value;
     if (!/^[0-9.]*$/.test(value)) return;
     if ((value.match(/\./g) || []).length > 1) return;
-
     const [int = "", dec = ""] = value.split(".");
     if (int.length > 7 || dec.length > 3) return;
-
     setPrice(value);
   };
 
@@ -57,8 +80,8 @@ export default function EditSection({ product, onCancel }) {
     e.preventDefault();
 
     const numPrice = parseFloat(price);
-    if (!title || !description || isNaN(numPrice)) {
-      setNotification("Invalid data"); // 🔹 використання Notification
+    if (!title.trim() || !description.trim() || isNaN(numPrice) || !currency) {
+      setNotification("Please fill all required fields");
       return;
     }
 
@@ -75,7 +98,6 @@ export default function EditSection({ product, onCancel }) {
     }
 
     setLoading(true);
-
     try {
       const res = await fetch("http://127.0.0.1:5000/update_product", {
         method: "POST",
@@ -91,7 +113,7 @@ export default function EditSection({ product, onCancel }) {
         return;
       }
 
-      setNotification("Product updated");
+      setNotification("Product updated successfully!");
       onCancel();
     } catch (err) {
       setLoading(false);
@@ -101,16 +123,13 @@ export default function EditSection({ product, onCancel }) {
 
   return (
     <section id="edit" className="section">
-      {/* 🔹 Notification */}
       {notification && (
-        <Notification
-          message={notification}
-          onClose={() => setNotification("")}
-        />
+        <Notification message={notification} onClose={() => setNotification("")} />
       )}
 
-      <form className="create-form" onSubmit={handleSubmit}>
+      <form className="create-form" onSubmit={handleSubmit} encType="multipart/form-data">
         <h2>Edit product</h2>
+
         {imagePreview && (
           <div className="image-preview-wrapper">
             <div className="image-preview-frame">
@@ -119,7 +138,6 @@ export default function EditSection({ product, onCancel }) {
           </div>
         )}
 
-        {/* FILE INPUT */}
         <label className="file-input">
           <input
             ref={fileInputRef}
@@ -127,9 +145,7 @@ export default function EditSection({ product, onCancel }) {
             accept="image/*"
             onChange={handleImageChange}
           />
-          <span className="file-name">
-            {image ? image.name : "Upload image"}
-          </span>
+          <span className="file-name">{image ? image.name : "Upload image"}</span>
         </label>
 
         <div className="input-wrapper">
@@ -171,6 +187,12 @@ export default function EditSection({ product, onCancel }) {
           </select>
         </div>
 
+        {currency === "SOL" && commission !== null && (
+          <p style={{ color: "#00ffff", fontWeight: "bold" }}>
+            Commission: {commission} SOL
+          </p>
+        )}
+
         <div className="actions">
           <button disabled={loading}>
             {loading ? "Saving..." : "Save changes"}
@@ -189,7 +211,6 @@ export default function EditSection({ product, onCancel }) {
             onClick={handleRemoveImage}
             title="Remove image"
           />
-
           <button
             type="button"
             className="img-btn replace"

@@ -8,12 +8,13 @@ function shortenAddress(address) {
 
 export default function Header({ activeSection, setActiveSection }) {
   const { user, logout } = useWalletAuth();
-  const [showDisconnect, setShowDisconnect] = useState(false);
+  const [showActions, setShowActions] = useState(false);
+  const [showConnectModal, setShowConnectModal] = useState(false);
   const timerRef = useRef(null);
 
   const handleMouseOver = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    setShowDisconnect(true);
+    setShowActions(true);
   };
 
   const handleMouseOut = (e) => {
@@ -21,25 +22,20 @@ export default function Header({ activeSection, setActiveSection }) {
     if (
       toElement &&
       (toElement.closest(".wallet-wrapper") ||
-        toElement.closest(".wallet-disconnect"))
+        toElement.closest(".wallet-action-btn"))
     ) {
       return;
     }
-    timerRef.current = setTimeout(() => setShowDisconnect(false), 3000);
+    timerRef.current = setTimeout(() => setShowActions(false), 3000);
   };
 
   const handleLogout = async () => {
     try {
-      // 🔹 Solana
       if (window.solana?.isPhantom) {
         try { await window.solana.disconnect(); } catch {}
       }
-
-      // 🔹 EVM-гаманець через Web3Modal
       if (window.ethereum?.isMetaMask || window.ethereum?.isCoinbaseWallet) {
-        try {
-          await window.ethereum.request({ method: "eth_requestAccounts" });
-        } catch {}
+        try { await window.ethereum.request({ method: "eth_requestAccounts" }); } catch {}
       }
     } catch (err) {
       console.error("Failed to disconnect wallet:", err);
@@ -78,7 +74,6 @@ export default function Header({ activeSection, setActiveSection }) {
         </nav>
       ) : (
         <div className="header-actions">
-          {/* Використовуємо компонент ConnectWallet для єдиної логіки */}
           <ConnectWallet />
         </div>
       )}
@@ -92,13 +87,27 @@ export default function Header({ activeSection, setActiveSection }) {
         >
           <div className="wallet-chip">{shortenAddress(user.wallet)}</div>
 
-          {showDisconnect && (
-            <button
-              onClick={handleLogout}
-              className="wallet-disconnect visible px-3 py-1 bg-red-500 text-white rounded-md absolute top-10 right-0"
-            >
-              Disconnect
-            </button>
+          {showActions && (
+            <div className="absolute top-10 right-0 flex flex-col gap-2 z-50">
+              <button
+                onClick={handleLogout}
+                className="wallet-action-btn px-3 py-1 bg-red-500 text-white rounded-md"
+              >
+                Disconnect
+              </button>
+
+              <button
+                onClick={() => setShowConnectModal(true)}
+                className="wallet-action-btn px-3 py-1 bg-cyan-500 text-black rounded-md"
+              >
+                Change Wallet
+              </button>
+            </div>
+          )}
+
+          {/* Виклик існуючого ConnectWallet для повторного підключення */}
+          {showConnectModal && (
+            <ConnectWallet />
           )}
         </div>
       )}

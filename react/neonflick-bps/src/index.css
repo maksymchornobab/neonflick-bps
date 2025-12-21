@@ -351,7 +351,6 @@ body {
 
 .input-wrapper {
   position: relative;
-  margin-bottom: 24px; /* трохи більше, щоб лічильник не перекривався */
   width: 100%;
 }
 
@@ -544,6 +543,38 @@ body {
   opacity: 0.6;
 }
 
+/* Таймер відліку на продукті - активний неоновий стиль */
+.product-timer {
+  display: inline-block;
+  background-color: #00ffff; /* яскравий бірюзовий */
+  color: #000; /* контрастний текст */
+  font-weight: bold;
+  font-size: 0.85rem;
+  padding: 3px 8px;
+  border-radius: 12px;
+  margin-top: 5px;
+  text-align: center;
+  min-width: 60px;
+  
+  /* Неоновий ефект */
+  box-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff, 0 0 15px #00ffff, 0 0 20px #00ffff;
+  text-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff;
+  transition: box-shadow 0.3s, text-shadow 0.3s;
+}
+
+/* Якщо таймер сплив */
+.product-timer.expired {
+  background-color: rgba(128, 128, 128, 0.8); /* сірий */
+  color: #fff;
+  box-shadow: none;
+  text-shadow: none;
+}
+
+/* Позиціонування у нижній частині картки */
+.product-card .product-footer + .product-timer {
+  display: block;
+  margin-top: 11px;
+}
 
 /* BUTTON */
 .product-button {

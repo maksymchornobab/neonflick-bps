@@ -1,22 +1,39 @@
 import { useEffect, useState } from "react";
-import Notification from "./Notification"; // 🔹 імпорт Notification
+import Notification from "./Notification";
 
 export default function ProductsSection({ onEdit }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openMenuId, setOpenMenuId] = useState(null);
-  const [notification, setNotification] = useState(""); // 🔹 стан сповіщення
-
-  // 🔹 Стан для нової панелі
+  const [notification, setNotification] = useState("");
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("date");
   const [sortOrder, setSortOrder] = useState("desc");
   const [chooseMode, setChooseMode] = useState(false);
 
+  // 🔹 Таймери стану
+  const [timers, setTimers] = useState({});
+
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date().getTime();
+      const newTimers = {};
+      products.forEach((p) => {
+        if (p.expires_at) {
+          const remaining = new Date(p.expires_at).getTime() - now;
+          newTimers[p.id] = remaining > 0 ? remaining : 0;
+        }
+      });
+      setTimers(newTimers);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [products]);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -32,7 +49,6 @@ export default function ProductsSection({ onEdit }) {
     }
   };
 
-  // 🔹 Toggle меню продукту
   const toggleMenu = (id) => setOpenMenuId(openMenuId === id ? null : id);
 
   const handleEdit = (product) => onEdit(product);
@@ -64,7 +80,6 @@ export default function ProductsSection({ onEdit }) {
 
   const handleShare = (product) => setNotification(`Share ${product.title}`);
 
-  // 🔹 Фільтрація та сортування
   const displayedProducts = [...products]
     .filter((p) =>
       p.title.toLowerCase().includes(searchQuery.trim().toLowerCase())
@@ -90,6 +105,15 @@ export default function ProductsSection({ onEdit }) {
     else setSelectedProducts(products.map((p) => p.id));
   };
 
+  const formatTime = (ms) => {
+    if (ms <= 0) return "Expired";
+    const totalSec = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSec / 3600);
+    const minutes = Math.floor((totalSec % 3600) / 60);
+    const seconds = totalSec % 60;
+    return `${hours}h ${minutes}m ${seconds}s`;
+  };
+
   if (loading) return <p className="products-loading">Loading products...</p>;
   if (products.length === 0) return <p className="products-empty">No products yet</p>;
 
@@ -99,68 +123,63 @@ export default function ProductsSection({ onEdit }) {
         <Notification message={notification} onClose={() => setNotification("")} />
       )}
 
-      <h2 className="products-title">
-  PRODUCTS ({products.length}/10)
-</h2>
+      <h2 className="products-title">PRODUCTS ({products.length}/10)</h2>
 
-
-
-      {/* 🔹 Панель управління */}
+      {/* Панель управління */}
       <div className="products-panel">
-  <div className="choose-section">
-    <button onClick={() => setChooseMode(!chooseMode)}>
-      {chooseMode ? "Cancel Choose" : "Choose"}
-    </button>
-    {chooseMode && (
-      <>
-        <button onClick={toggleSelectAll}>
-          {selectedProducts.length === products.length ? "Unselect All" : "Choose All"}
-        </button>
-        <button
-          onClick={() => handleDelete(selectedProducts)}
-          disabled={!selectedProducts.length}
-        >
-          Delete
-        </button>
-      </>
-    )}
-  </div>
+        <div className="choose-section">
+          <button onClick={() => setChooseMode(!chooseMode)}>
+            {chooseMode ? "Cancel Choose" : "Choose"}
+          </button>
+          {chooseMode && (
+            <>
+              <button onClick={toggleSelectAll}>
+                {selectedProducts.length === products.length ? "Unselect All" : "Choose All"}
+              </button>
+              <button
+                onClick={() => handleDelete(selectedProducts)}
+                disabled={!selectedProducts.length}
+              >
+                Delete
+              </button>
+            </>
+          )}
+        </div>
 
-  <div className="sort-section">
-    <label>
-      Sort by:
-      <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-        <option value="date">Date</option>
-        <option value="price">Price</option>
-      </select>
-    </label>
-    <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
-      {sortBy === "date" ? (
-        <>
-          <option value="asc">Oldest → Newest</option>
-          <option value="desc">Newest → Oldest</option>
-        </>
-      ) : (
-        <>
-          <option value="asc">Lowest → Highest</option>
-          <option value="desc">Highest → Lowest</option>
-        </>
-      )}
-    </select>
-  </div>
+        <div className="sort-section">
+          <label>
+            Sort by:
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+              <option value="date">Date</option>
+              <option value="price">Price</option>
+            </select>
+          </label>
+          <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
+            {sortBy === "date" ? (
+              <>
+                <option value="asc">Oldest → Newest</option>
+                <option value="desc">Newest → Oldest</option>
+              </>
+            ) : (
+              <>
+                <option value="asc">Lowest → Highest</option>
+                <option value="desc">Highest → Lowest</option>
+              </>
+            )}
+          </select>
+        </div>
 
-  <div className="search-section">
-    <input
-      type="text"
-      placeholder="Search by title..."
-      value={searchQuery}
-      onChange={(e) => setSearchQuery(e.target.value)}
-    />
-  </div>
-</div>
+        <div className="search-section">
+          <input
+            type="text"
+            placeholder="Search by title..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
 
-
-      {/* 🔹 Продукти */}
+      {/* Продукти */}
       <div className="products-grid">
         {displayedProducts.map((product) => (
           <div
@@ -187,6 +206,11 @@ export default function ProductsSection({ onEdit }) {
               <div className="product-footer">
                 <span className="product-price">{product.price} {product.currency}</span>
                 <span className="product-date">{product.created_at}</span>
+              </div>
+
+              {/* 🔹 Таймер відліку */}
+              <div className="product-timer">
+                {timers[product.id] !== undefined ? formatTime(timers[product.id]) : ""}
               </div>
 
               <button className="product-button">View</button>

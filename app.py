@@ -129,6 +129,8 @@ def create_product():
     description = request.form.get("description")
     price = request.form.get("price")
     currency = request.form.get("currency")
+    created_at = datetime.utcnow().strftime("%d.%m.%Y")
+
 
     logging.debug(
         f"/create_product -> received title={title}, description={description}, "
@@ -138,7 +140,7 @@ def create_product():
     if not all([image, title, description, price, currency]):
         return jsonify({"error": "all fields required"}), 400
 
-    if len(title) > 50 or len(description) > 500:
+    if len(title) > 50 or len(description) > 1000:
         return jsonify({"error": "field limit exceeded"}), 400
 
     try:
@@ -146,7 +148,7 @@ def create_product():
     except ValueError:
         return jsonify({"error": "invalid price"}), 400
 
-    if price < 0.001 or price > 1_000_000:
+    if price < 0.001 or price > 9_999_999:
         return jsonify({"error": "invalid price (0.001 - 1,000,000)"}), 400
 
     # ---------- AWS S3 UPLOAD ----------
@@ -178,7 +180,7 @@ def create_product():
         "price": price,
         "currency": currency,
         "image": image_url,
-        "created_at": datetime.utcnow()
+        "created_at": created_at
     })
 
     logging.debug("/create_product -> product saved to DB")
@@ -280,6 +282,93 @@ def update_product():
     )
 
     return jsonify({"success": True})
+
+@app.route("/products/search", methods=["GET"])
+def search_products():
+    """
+    Параметри query string:
+    - q: рядок пошуку по title
+    - sort_by: "date" або "price"
+    - order: "asc" або "desc"
+    """
+    q = request.args.get("q", "").strip()
+    sort_by = request.args.get("sort_by", "date")
+    order = request.args.get("order", "desc")  # за замовчуванням новіші зверху
+
+    # Вибираємо поле для сортування
+    if sort_by == "price":
+        sort_field = "price"
+    else:
+        sort_field = "created_at"
+
+    sort_order = 1 if order == "asc" else -1
+
+    # Пошук по title з регексом, якщо q задано
+    query = {"title": {"$regex": q, "$options": "i"}} if q else {}
+
+    items = products.find(query).sort(sort_field, sort_order)
+
+    result = []
+    for item in items:
+        result.append({
+            "wallet": item.get("wallet"),
+            "id": str(item["_id"]),
+            "title": item.get("title"),
+            "description": item.get("description"),
+            "price": item.get("price"),
+            "currency": item.get("currency"),
+            "image": item.get("image"),
+            "created_at": item.get("created_at")
+        })
+
+    return jsonify({"products": result})
+
+@app.route("/delete-products", methods=["POST"])
+def delete_products():
+    """
+    Масове видалення продуктів
+    JSON body:
+    {
+        "ids": ["id1", "id2", ...]
+    }
+    """
+    data = request.json
+    ids = data.get("ids", [])
+
+    if not ids or not isinstance(ids, list):
+        return jsonify({"error": "Missing or invalid ids"}), 400
+
+    deleted_ids = []
+    errors = []
+
+    for product_id in ids:
+        try:
+            mongo_id = ObjectId(product_id)
+        except Exception:
+            errors.append({"id": product_id, "error": "Invalid ObjectId"})
+            continue
+
+        # знайти продукт
+        product = products.find_one({"_id": mongo_id})
+        if not product:
+            errors.append({"id": product_id, "error": "Product not found"})
+            continue
+
+        # видалити з MongoDB
+        result = products.delete_one({"_id": mongo_id})
+        if result.deleted_count == 0:
+            errors.append({"id": product_id, "error": "Delete failed"})
+            continue
+
+        # видалити з S3
+        s3_key = "/".join(product["image"].split("/")[-2:])
+        try:
+            s3.delete_object(Bucket=AWS_BUCKET, Key=s3_key)
+            deleted_ids.append(product_id)
+        except Exception as e:
+            errors.append({"id": product_id, "error": str(e)})
+
+    return jsonify({"deleted": deleted_ids, "errors": errors})
 
 
 if __name__ == "__main__":

@@ -865,3 +865,73 @@ body {
   position: relative;
 }
 
+/* Контейнер для дій гаманця */
+.wallet-action-container {
+  position: absolute;
+  top: 50px; /* еквівалент top-10 */
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem; /* еквівалент gap-2 */
+  z-index: 50;
+  perspective: 1000px; /* додаємо глибину для 3D hover */
+}
+
+/* Базові стилі для кнопок дій */
+.wallet-action-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
+  font-weight: 700;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+  border: 2px solid #00ffff; /* обводка для футуристичного вигляду */
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  position: relative;
+  overflow: hidden;
+  background-color: #0a0a0a; /* темний фон для обох кнопок */
+}
+
+/* Subtle glow effect для кнопок */
+.wallet-action-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(45deg, rgba(0,255,255,0.2), rgba(0,255,255,0));
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 0;
+}
+
+.wallet-action-btn span {
+  position: relative;
+  z-index: 1;
+}
+
+/* Disconnect */
+.wallet-action-btn.disconnect {
+  color: #00ffff;
+  border-color: #ef4444; /* червона обводка */
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+}
+
+.wallet-action-btn.disconnect:hover {
+  background-color: #1a0a0a; /* трохи світліший чорний при hover */
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.9), 0 0 40px rgba(255, 80, 80, 0.5);
+  transform: translateY(-2px) scale(1.05) rotateX(2deg);
+}
+
+/* Change Wallet */
+.wallet-action-btn.change-wallet {
+  color: #00ffff;
+  border-color: #00ffff; /* класична обводка */
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+}
+
+.wallet-action-btn.change-wallet:hover {
+  background-color: #1a0a0a; /* темний фон при hover */
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.9), 0 0 40px rgba(0, 255, 255, 0.5);
+  transform: translateY(-2px) scale(1.05) rotateX(2deg);
+}

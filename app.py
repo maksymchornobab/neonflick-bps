@@ -44,25 +44,19 @@ s3 = boto3.client(
     region_name=AWS_REGION,
 )
 
-DELETE_PRODUCT_URL = "http://127.0.0.1:5000/delete-product"  # твій існуючий роут
-CHECK_INTERVAL = 60  # перевірка кожні 60 секунд
-
 # ---------------- HELPERS ----------------
 def decode_token():
     """Decode JWT from Authorization header"""
     auth_header = request.headers.get("Authorization")
     if not auth_header:
-        logging.debug("decode_token -> no Authorization header")
         return None
     try:
         token_type, token = auth_header.split()
         if token_type.lower() != "bearer":
-            logging.debug("decode_token -> token type not Bearer")
             return None
         payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
         return payload
     except Exception as e:
-        logging.debug(f"decode_token -> failed to decode token: {e}")
         return None
 
 def calculate_sol_commission(price: float) -> float:
@@ -86,24 +80,47 @@ def calculate_sol_commission(price: float) -> float:
         return 0.25
 
 def expired_products_checker():
+    print("🔥 Expired products checker started")
+
     while True:
         try:
             now = datetime.utcnow()
             expired_items = products.find({"expires_at": {"$lte": now}})
 
             for item in expired_items:
-                product_id = str(item["_id"])
-                
+                product_id = item["_id"]
+                s3_key = item.get("s3_key")
+
+                if not s3_key:
+                    print(f"❌ No s3_key for {product_id}")
+                    continue
+
+                # 1️⃣ Перевіряємо що файл існує
                 try:
-                    requests.post("http://127.0.0.1:5000/delete-product", json={"id": product_id})
+                    s3.head_object(
+                        Bucket=AWS_BUCKET,
+                        Key=s3_key
+                    )
                 except Exception as e:
-                    print(f"Error deleting product {product_id}: {e}")
+                    print(f"❌ FILE NOT FOUND in S3: {s3_key}")
+                    continue
+
+                # 2️⃣ Видаляємо файл
+                s3.delete_object(
+                    Bucket=AWS_BUCKET,
+                    Key=s3_key
+                )
+
+                # 3️⃣ Видаляємо Mongo
+                products.delete_one({"_id": product_id})
+
+                print(f"✅ Fully deleted {product_id}")
 
         except Exception as e:
             print(f"Checker error: {e}")
 
-        time.sleep(60)  # перевіряємо кожні 30 секунд (налаштовується)
-        
+        time.sleep(60)
+
 
 # 🔹 Запуск фоновго потоку після створення Flask app
 threading.Thread(target=expired_products_checker, daemon=True).start()
@@ -119,7 +136,6 @@ def root():
 def auth_wallet():
     data = request.json
     wallet = data.get("wallet")
-    logging.debug(f"/auth/wallet -> wallet: {wallet}")
 
     if not wallet or not isinstance(wallet, str):
         return jsonify({"error": "wallet must be string"}), 400
@@ -146,14 +162,12 @@ def auth_wallet():
 @app.route("/auth/me", methods=["GET"])
 def auth_me():
     payload = decode_token()
-    logging.debug(f"/auth/me -> payload: {payload}")
 
     if not payload:
         return jsonify({"user": None}), 200
 
     wallet = payload.get("wallet")
     user = users.find_one({"wallet": wallet})
-    logging.debug(f"/auth/me -> user from DB: {user}")
 
     if not user:
         return jsonify({"user": None}), 200
@@ -166,13 +180,11 @@ def auth_me():
 @app.route("/create_product", methods=["POST"])
 def create_product():
     payload = decode_token()
-    logging.debug(f"/create_product -> payload: {payload}")
 
     if not payload:
         return jsonify({"error": "unauthorized"}), 401
 
     wallet = payload.get("wallet")
-    logging.debug(f"/create_product -> wallet: {wallet}")
 
     image = request.files.get("image")
     title = request.form.get("title")
@@ -181,11 +193,6 @@ def create_product():
     currency = request.form.get("currency")
     duration_value = request.form.get("duration")  # 🔹 нове поле для тривалості
     created_at = datetime.utcnow()
-
-    logging.debug(
-        f"/create_product -> received title={title}, description={description}, "
-        f"price={price}, currency={currency}, duration={duration_value}, image={image}"
-    )
 
     # перевірки
     if not all([image, title, description, price, currency, duration_value]):
@@ -215,7 +222,6 @@ def create_product():
         )
 
         image_url = f"https://{AWS_BUCKET}.s3.{AWS_REGION}.amazonaws.com/{file_key}"
-        logging.debug(f"/create_product -> image uploaded to S3: {image_url}")
 
     except ClientError as e:
         logging.exception(f"/create_product -> S3 upload failed: {e}")
@@ -226,7 +232,7 @@ def create_product():
 
     # ---------- Розрахунок expires_at ----------
     duration_map = {
-        "3h": timedelta(hours=3),
+        "2m": timedelta(minutes=2),
         "6h": timedelta(hours=6),
         "12h": timedelta(hours=12),
         "1d": timedelta(days=1),
@@ -240,22 +246,23 @@ def create_product():
 
     # ---------- Додавання продукту в базу ----------
     products.insert_one({
-        "wallet": wallet,
-        "title": title,
-        "description": description,
-        "price": price,
-        "currency": currency,
-        "commission": commission,
-        "stats": {"status": "new", "count": 0},
-        "image": image_url,
-        "created_at": created_at,
-        "expires_at": expires_at
-    })
+    "wallet": wallet,
+    "title": title,
+    "description": description,
+    "price": price,
+    "currency": currency,
+    "commission": commission,
+    "stats": {"status": "new", "count": 0},
+    "image": image_url,        # URL для фронту
+    "s3_key": file_key,        # ✅ ДЛЯ ВИДАЛЕННЯ
+    "created_at": created_at,
+    "expires_at": expires_at
+})
 
-    logging.debug("/create_product -> product saved to DB")
 
     return jsonify({
         "status": "ok",
+        "s3_key": file_key,
         "image": image_url,
         "commission": commission,
         "expires_at": expires_at.isoformat()
@@ -279,11 +286,6 @@ def calculate_commission_sol():
     commission = round(commission, 4)
 
     return jsonify({"price": price, "commission": commission})
-
-
-
-from datetime import datetime
-from flask import jsonify
 
 @app.route("/products", methods=["GET"])
 def get_products():

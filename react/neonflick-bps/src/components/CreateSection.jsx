@@ -215,7 +215,7 @@ export default function CreateSection() {
             required
           >
             <option value="">Select a product duration</option>
-            <option value="3h">3 hours</option>
+            <option value="2m">2 minutes</option>
             <option value="6h">6 hours</option>
             <option value="12h">12 hours</option>
             <option value="1d">1 day</option>

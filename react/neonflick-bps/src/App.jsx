@@ -1,8 +1,12 @@
 import { useState } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import Header from "./components/Header";
 import CreateSection from "./components/CreateSection";
 import EditSection from "./components/EditSection";
 import ProductsSection from "./components/ProductsSection";
+import PaymentPage from "./components/PaymentPage";
+
 import { useWalletAuth } from "./components/WalletAuthContext";
 import "./index.css";
 
@@ -17,37 +21,47 @@ export default function App() {
   }
 
   return (
-    <>
-      <Header
-        user={user}
-        activeSection={activeSection}
-        setActiveSection={setActiveSection}
-      />
-
+    <BrowserRouter>
       <main>
-        {!user && (
-          <div className="center">
-          </div>
-        )}
+        <Routes>
+          {/* 💳 Сторінка оплати (публічна) */}
+          <Route path="/pay/:productId" element={<PaymentPage />} />
 
-        {user && activeSection === "products" && (
-          <ProductsSection
-            onEdit={(product) => {
-              setEditingProduct(product);
-              setActiveSection("edit");
-            }}
+          {/* 🏠 Основна сторінка (dashboard) */}
+          <Route
+            path="/"
+            element={
+              <>
+                <Header
+                  user={user}
+                  activeSection={activeSection}
+                  setActiveSection={setActiveSection}
+                />
+
+                {!user && <div className="center"></div>}
+
+                {user && activeSection === "products" && (
+                  <ProductsSection
+                    onEdit={(product) => {
+                      setEditingProduct(product);
+                      setActiveSection("edit");
+                    }}
+                  />
+                )}
+
+                {user && activeSection === "create" && <CreateSection />}
+
+                {user && activeSection === "edit" && editingProduct && (
+                  <EditSection
+                    product={editingProduct}
+                    onCancel={() => setActiveSection("products")}
+                  />
+                )}
+              </>
+            }
           />
-        )}
-
-        {user && activeSection === "create" && <CreateSection />}
-
-        {user && activeSection === "edit" && editingProduct && (
-          <EditSection
-            product={editingProduct}
-            onCancel={() => setActiveSection("products")}
-          />
-        )}
+        </Routes>
       </main>
-    </>
+    </BrowserRouter>
   );
 }

@@ -5,7 +5,7 @@ import { useWalletAuth } from "./WalletAuthContext";
 import { Connection, clusterApiUrl } from "@solana/web3.js";
 import Notification from "./Notification"; // 🔹 імпорт Notification
 
-export default function ConnectWallet() {
+export default function ConnectWallet({ onConnect }) { // 🔹 додано onConnect
   const { loginWithWallet } = useWalletAuth();
   const [connecting, setConnecting] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -44,6 +44,10 @@ export default function ConnectWallet() {
       }
 
       await loginWithWallet(walletAddress);
+
+      // 🔹 виклик callback після успішного підключення
+      if (onConnect) onConnect(walletAddress);
+
       setNotification(`Wallet connected: ${walletAddress}`); // 🔹 Notification
       setShowModal(false);
     } catch (err) {

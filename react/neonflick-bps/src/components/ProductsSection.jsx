@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import Notification from "./Notification";
+import { useNavigate } from "react-router-dom";
 
 export default function ProductsSection({ onEdit }) {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openMenuId, setOpenMenuId] = useState(null);
@@ -213,7 +215,13 @@ export default function ProductsSection({ onEdit }) {
                 {timers[product.id] !== undefined ? formatTime(timers[product.id]) : ""}
               </div>
 
-              <button className="product-button">View</button>
+              <button
+  className="product-button"
+  onClick={() => navigate(`/pay/${product.id}`)}
+>
+  View
+</button>
+
             </div>
 
             <div className="three-dots-container">

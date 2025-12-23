@@ -1,9 +1,9 @@
 from pymongo.mongo_client import MongoClient
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, abort
 from flask_cors import CORS
 import os
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import jwt
 from werkzeug.utils import secure_filename
 import uuid
@@ -29,7 +29,6 @@ client = MongoClient(uri)
 db = client.get_database("neonflick-bps")
 users = db.get_collection("users")
 products = db.get_collection("products")
-expired_products = db.get_collection("expired_products")
 
 # ---------- LOGGING ----------
 logging.basicConfig(level=logging.DEBUG)
@@ -467,6 +466,50 @@ def delete_products():
             errors.append({"id": product_id, "error": str(e)})
 
     return jsonify({"deleted": deleted_ids, "errors": errors})
+
+@app.route("/api/pay/<product_id>", methods=["GET"])
+def get_payment_data(product_id):
+    # 1️⃣ Перевірка ObjectId
+    try:
+        product_oid = ObjectId(product_id)
+    except Exception:
+        abort(400, description="Invalid product id")
+
+    # 2️⃣ Отримання продукту
+    product = products.find_one({"_id": product_oid})
+
+    if not product:
+        abort(404, description="Product not found")
+
+    # 3️⃣ Перевірка часу дії
+    expires_at = product.get("expires_at")
+    if not expires_at:
+        abort(500, description="Product expiration not set")
+
+    # 🔹 Переводимо expires_at у UTC, якщо потрібно
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    now = datetime.now(timezone.utc)
+
+    if now > expires_at:
+        abort(410, description="Product expired")
+
+    # 4️⃣ Формування payload (використовуємо тільки дані з БД)
+    payment_payload = {
+        "product_id": str(product["_id"]),
+        "sellerWallet": product["wallet"],
+        "price": product["price"],
+        "currency": product["currency"],
+        "commission": product.get("commission"),  # залишаємо для сумісності
+        "expires_at": expires_at.isoformat(),
+        "title": product["title"],
+        "image": product["image"],
+        "description": product.get("description"),  # 🔹 Додаємо description
+    }
+
+    return jsonify(payment_payload), 200
+
 
 
 if __name__ == "__main__":

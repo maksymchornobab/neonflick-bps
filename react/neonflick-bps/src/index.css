@@ -935,3 +935,185 @@ body {
   box-shadow: 0 0 20px rgba(0, 255, 255, 0.9), 0 0 40px rgba(0, 255, 255, 0.5);
   transform: translateY(-2px) scale(1.05) rotateX(2deg);
 }
+
+/* 🌌 Background */
+.payment-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background:
+    radial-gradient(circle at top, #001a1a, #000),
+    linear-gradient(120deg, #001111, #000);
+  font-family: "Inter", "Orbitron", sans-serif;
+  color: #e6ffff;
+}
+
+/* 💳 Glass Card */
+.payment-card {
+  width: 380px;
+  background: rgba(0, 30, 30, 0.55);
+  backdrop-filter: blur(14px);
+  border-radius: 18px;
+  padding: 22px;
+  border: 1px solid rgba(0, 255, 255, 0.35);
+  box-shadow:
+    0 0 25px rgba(0, 255, 255, 0.15),
+    inset 0 0 20px rgba(0, 255, 255, 0.08);
+}
+
+/* 🖼 Product Image */
+.payment-card__image {
+  width: 100%;
+  border-radius: 12px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(0, 255, 255, 0.4);
+  box-shadow: 0 0 18px rgba(0, 255, 255, 0.2);
+}
+
+/* 🧾 Title */
+.payment-card__title {
+  font-size: 1.35rem;
+  text-align: center;
+  margin-bottom: 16px;
+  letter-spacing: 1px;
+  color: #00ffff;
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.8);
+}
+
+/* 📊 Details */
+.payment-card__details {
+  margin-bottom: 14px;
+}
+
+.payment-card__details div {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(0, 255, 255, 0.25);
+  font-size: 0.95rem;
+}
+
+.payment-card__details span {
+  opacity: 0.8;
+}
+
+/* 🔌 Wallet Section */
+.payment-card__wallet {
+  margin-top: 18px;
+  margin-bottom: 12px;
+}
+
+/* 💎 Pay Button */
+.payment-card__pay-btn {
+  width: 100%;
+  padding: 14px;
+  margin-top: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #001111;
+  background: linear-gradient(
+    135deg,
+    #00ffff,
+    #00cccc
+  );
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow:
+    0 0 20px rgba(0, 255, 255, 0.7),
+    0 0 40px rgba(0, 255, 255, 0.25);
+  transition: all 0.25s ease;
+}
+
+.payment-card__pay-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow:
+    0 0 30px rgba(0, 255, 255, 0.9),
+    0 0 60px rgba(0, 255, 255, 0.4);
+}
+
+.payment-card__pay-btn:active {
+  transform: scale(0.98);
+}
+
+/* 🚫 Disabled */
+.payment-card__pay-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ⏳ Loading / Error */
+.payment-page__loading,
+.payment-page__error {
+  font-size: 1.2rem;
+  color: #00ffff;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+}
+
+/* Центрування обох вікон */
+.payment-page--double {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px; /* відстань між вікнами */
+}
+
+/* 💳 Окреме вікно для description */
+.payment-card--description {
+  width: 380px;
+  height: 521.91px;
+  background: rgba(0, 30, 30, 0.55);
+  backdrop-filter: blur(14px);
+  border-radius: 18px;
+  padding: 22px;
+  border: 1px solid rgba(0, 255, 255, 0.35);
+  box-shadow:
+    0 0 25px rgba(0, 255, 255, 0.15),
+    inset 0 0 20px rgba(0, 255, 255, 0.08);
+  overflow-y: auto;
+
+  /* 🔹 Початковий стан для анімації */
+  opacity: 0;
+  transform: translateX(50px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  pointer-events: none; /* щоб блок не заважав при закритому стані */
+}
+
+/* 🔹 Активний стан */
+.payment-card--description.payment-card--active {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+/* Заголовок по центру */
+.payment-card--description h2 {
+  text-align: center;
+  color: #00ffff;
+  margin-bottom: 16px;
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.8);
+}
+
+/* Toggle description */
+.payment-card__description-toggle {
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+  text-align: center;
+  cursor: pointer;
+  color: #00ffff;
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+/* Скрол для повного опису */
+.payment-card__full-description {
+  white-space: pre-wrap;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+

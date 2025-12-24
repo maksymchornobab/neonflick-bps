@@ -15,6 +15,11 @@ from bson.objectid import ObjectId
 import requests
 import time
 import threading
+from solana.transaction import Transaction
+from solana.system_program import transfer, TransferParams
+from solana.publickey import PublicKey
+from solana.rpc.api import Client
+
 
 # ---------------- CONFIG ----------------
 load_dotenv()
@@ -22,6 +27,8 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("JWT_SECRET")
 
 CORS(app, supports_credentials=True, origins=["http://localhost:3000"])
+
+PLATFORM_WALLET = os.getenv("PLATFORM_WALLET_ADDRESS")
 
 db_password = os.getenv("DB_PASSWORD")
 uri = f"mongodb+srv://neonflick-bps:{db_password}@cluster0.mhunksj.mongodb.net/?appName=Cluster0"
@@ -509,6 +516,89 @@ def get_payment_data(product_id):
     }
 
     return jsonify(payment_payload), 200
+
+@app.route("/api/pay/prepare/sol", methods=["POST"])
+def prepare_sol_transaction():
+    data = request.json
+
+    product_id = data.get("product_id")
+    buyer_wallet = data.get("buyer_wallet")
+
+    if not product_id or not buyer_wallet:
+        abort(400, description="Missing product_id or buyer_wallet")
+
+    # 1️⃣ Product
+    product = products.find_one({"_id": ObjectId(product_id)})
+    if not product:
+        abort(404, description="Product not found")
+
+    # 2️⃣ Expiration check (+30s buffer)
+    expires_at = product.get("expires_at")
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    now = datetime.now(timezone.utc)
+    remaining_seconds = (expires_at - now).total_seconds()
+
+    if remaining_seconds <= 0:
+        abort(410, description="Product expired")
+
+    if remaining_seconds < 30:
+        abort(
+            409,
+            description="Not enough time left to safely process the transaction"
+        )
+
+    # 3️⃣ Amounts
+    price = float(product["price"])
+    commission = float(product.get("commission", 0))
+    seller_amount = price - commission
+
+    if seller_amount <= 0:
+        abort(500, description="Invalid commission configuration")
+
+    buyer = PublicKey(buyer_wallet)
+    seller = PublicKey(product["wallet"])
+    platform = PublicKey(PLATFORM_WALLET)
+
+    LAMPORTS = 1_000_000_000
+
+    # 4️⃣ Build transaction
+    tx = Transaction()
+
+    tx.add(
+        transfer(
+            TransferParams(
+                from_pubkey=buyer,
+                to_pubkey=seller,
+                lamports=int(seller_amount * LAMPORTS)
+            )
+        )
+    )
+
+    if commission > 0:
+        tx.add(
+            transfer(
+                TransferParams(
+                    from_pubkey=buyer,
+                    to_pubkey=platform,
+                    lamports=int(commission * LAMPORTS)
+                )
+            )
+        )
+
+    client = Client("https://api.devnet.solana.com")
+    tx.recent_blockhash = client.get_latest_blockhash()["result"]["value"]["blockhash"]
+    tx.fee_payer = buyer
+
+    serialized_tx = tx.serialize(require_all_signatures=False).hex()
+
+    return jsonify({
+        "unsigned_transaction": serialized_tx,
+        "network": "solana",
+        "expires_in": int(remaining_seconds)
+    }), 200
+
 
 
 

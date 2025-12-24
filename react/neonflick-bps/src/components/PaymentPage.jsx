@@ -1,35 +1,68 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
-import ConnectWallet from "../components/ConnectWallet";
+import { Connection, Transaction } from "@solana/web3.js";
+import {
+  WalletProvider,
+  useWallet,
+} from "@solana/wallet-adapter-react";
+import {
+  WalletModalProvider,
+  WalletMultiButton,
+} from "@solana/wallet-adapter-react-ui";
+import {
+  PhantomWalletAdapter,
+  SolflareWalletAdapter,
+  TorusWalletAdapter,
+} from "@solana/wallet-adapter-wallets";
 import Notification from "../components/Notification";
+import "@solana/wallet-adapter-react-ui/styles.css";
 
-export default function PaymentPage() {
+export default function PaymentPageWrapper() {
+  const wallets = useMemo(
+    () => [
+      new PhantomWalletAdapter(),
+      new SolflareWalletAdapter(),
+      new TorusWalletAdapter(),
+    ],
+    []
+  );
+
+  return (
+    <WalletProvider wallets={wallets} autoConnect>
+      <WalletModalProvider>
+        <PaymentPage />
+      </WalletModalProvider>
+    </WalletProvider>
+  );
+}
+
+function PaymentPage() {
   const { productId } = useParams();
+  const { publicKey, signTransaction } = useWallet();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notification, setNotification] = useState("");
   const [timer, setTimer] = useState(0);
-  const [walletAddress, setWalletAddress] = useState(""); 
-  const [descriptionOpen, setDescriptionOpen] = useState(false); // 🔹 стан description
+  const [descriptionOpen, setDescriptionOpen] = useState(false);
+  const [paying, setPaying] = useState(false);
 
-  // 🔹 Fetch product payment data
+  const connection = useMemo(
+    () => new Connection("https://api.devnet.solana.com"),
+    []
+  );
+
+  // 🔹 Fetch product data
   useEffect(() => {
     const fetchPaymentData = async () => {
       try {
         const res = await fetch(`http://127.0.0.1:5000/api/pay/${productId}`);
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text);
-        }
-
+        if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
         setProduct(data);
-
         const expires = new Date(data.expires_at).getTime();
-        const now = Date.now();
-        setTimer(Math.max(expires - now, 0));
+        setTimer(Math.max(expires - Date.now(), 0));
       } catch (err) {
         console.error(err);
         setError("Product is unavailable or expired");
@@ -37,11 +70,10 @@ export default function PaymentPage() {
         setLoading(false);
       }
     };
-
     fetchPaymentData();
   }, [productId]);
 
-  // 🔹 Таймер відліку
+  // 🔹 Timer
   useEffect(() => {
     if (!timer) return;
     const interval = setInterval(() => {
@@ -50,37 +82,69 @@ export default function PaymentPage() {
     return () => clearInterval(interval);
   }, [timer]);
 
+  // 🔹 Форматування часу
   const formatTime = (ms) => {
     if (ms <= 0) return "Expired";
-    const totalSec = Math.floor(ms / 1000);
-    const hours = Math.floor(totalSec / 3600);
-    const minutes = Math.floor((totalSec % 3600) / 60);
-    const seconds = totalSec % 60;
-    return `${hours}h ${minutes}m ${seconds}s`;
+    const s = Math.floor(ms / 1000);
+    return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m ${s % 60}s`;
   };
 
-  if (loading) return <div className="payment-page__loading">Loading...</div>;
+  // 💳 PAY LOGIC
+  const handlePay = async () => {
+    if (!publicKey || !signTransaction) {
+      setNotification("Please connect your wallet first");
+      return;
+    }
+
+    try {
+      setPaying(true);
+      setNotification("Preparing transaction…");
+
+      const res = await fetch("http://127.0.0.1:5000/api/pay/prepare/sol", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          product_id: product._id,
+          buyer_wallet: publicKey.toString(),
+        }),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+      const { unsigned_transaction } = await res.json();
+
+      const txBuffer = Buffer.from(unsigned_transaction, "hex");
+      const transaction = Transaction.from(txBuffer);
+
+      setNotification("Waiting for wallet confirmation…");
+
+      const signedTx = await signTransaction(transaction);
+      const signature = await connection.sendRawTransaction(signedTx.serialize());
+      await connection.confirmTransaction(signature);
+
+      setNotification(`Payment sent ✔️ ${signature}`);
+    } catch (err) {
+      console.error(err);
+      setNotification(err.message || "Payment failed");
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  if (loading) return <div className="payment-page__loading">Loading…</div>;
   if (error) return <div className="payment-page__error">{error}</div>;
 
   return (
     <div className="payment-page payment-page--double">
-      {/* 💳 Оплата */}
       <div className="payment-card">
-        <img
-          src={product.image}
-          alt={product.title}
-          className="payment-card__image"
-        />
-
+        <img src={product.image} alt={product.title} className="payment-card__image" />
         <h1 className="payment-card__title">{product.title}</h1>
 
-        {/* 🔹 Description toggle */}
         {product.description && (
-          <div 
+          <div
             className="payment-card__description-toggle"
-            onClick={() => setDescriptionOpen(prev => !prev)}
+            onClick={() => setDescriptionOpen(p => !p)}
           >
-            Full description - {descriptionOpen ? "close" : "open"}
+            Full description – {descriptionOpen ? "close" : "open"}
           </div>
         )}
 
@@ -89,49 +153,37 @@ export default function PaymentPage() {
             <span>Price:</span>
             <strong>{product.price} {product.currency}</strong>
           </div>
-
           <div>
             <span>Total to pay:</span>
             <strong>{product.price} {product.currency}</strong>
           </div>
         </div>
 
-        {/* 🔹 Таймер */}
         <div className="payment-card__timer">
           Time left: {formatTime(timer)}
         </div>
 
-        {/* 🔌 Wallet connection */}
         <div className="payment-card__wallet">
-          {!walletAddress ? (
-            <ConnectWallet onConnect={(address) => setWalletAddress(address)} />
-          ) : (
-            <div className="connected-wallet">
-              Connected: {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
-            </div>
-          )}
+          <WalletMultiButton />
         </div>
 
         <button
           className="payment-card__pay-btn"
-          disabled={timer <= 0 || !walletAddress}
-          onClick={() => setNotification(`Wallet ${walletAddress} ready to pay ${product.price} ${product.currency}`)}
+          disabled={timer <= 0 || !publicKey || paying}
+          onClick={handlePay}
         >
-          {timer <= 0 ? "Expired" : "Pay now"}
+          {timer <= 0 ? "Expired" : paying ? "Processing…" : "Pay now"}
         </button>
       </div>
 
-      {/* 🔹 Повний опис */}
       {descriptionOpen && (
-  <div className={`payment-card payment-card--description ${descriptionOpen ? "payment-card--active" : ""}`}>
-  <h2>Full Description</h2>
-  <div className="payment-card__full-description">
-    {product.description}
-  </div>
-</div>
-
-)}
-
+        <div className="payment-card payment-card--description payment-card--active">
+          <h2>Full Description</h2>
+          <div className="payment-card__full-description">
+            {product.description}
+          </div>
+        </div>
+      )}
 
       {notification && (
         <Notification message={notification} onClose={() => setNotification("")} />

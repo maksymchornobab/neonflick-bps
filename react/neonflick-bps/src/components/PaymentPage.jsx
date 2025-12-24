@@ -12,23 +12,19 @@ import {
 import {
   PhantomWalletAdapter,
   SolflareWalletAdapter,
-  TorusWalletAdapter,
 } from "@solana/wallet-adapter-wallets";
 import Notification from "../components/Notification";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
+// 🔹 Wrapper (SOLANA ONLY)
 export default function PaymentPageWrapper() {
   const wallets = useMemo(
-    () => [
-      new PhantomWalletAdapter(),
-      new SolflareWalletAdapter(),
-      new TorusWalletAdapter(),
-    ],
+    () => [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
     []
   );
 
   return (
-    <WalletProvider wallets={wallets} autoConnect>
+    <WalletProvider wallets={wallets} autoConnect={false}>
       <WalletModalProvider>
         <PaymentPage />
       </WalletModalProvider>
@@ -53,23 +49,36 @@ function PaymentPage() {
     []
   );
 
-  // 🔹 Fetch product data
+  // 🔹 Fetch product
   useEffect(() => {
     const fetchPaymentData = async () => {
       try {
+        console.log("📦 Fetching product:", productId);
+
         const res = await fetch(`http://127.0.0.1:5000/api/pay/${productId}`);
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
-        setProduct(data);
+
+        // 🔥 НОРМАЛІЗАЦІЯ
+        const normalizedProduct = {
+          ...data,
+          _id: data.product_id,
+        };
+
+        console.log("✅ Product loaded:", normalizedProduct);
+
+        setProduct(normalizedProduct);
+
         const expires = new Date(data.expires_at).getTime();
         setTimer(Math.max(expires - Date.now(), 0));
       } catch (err) {
-        console.error(err);
+        console.error("❌ Fetch error:", err);
         setError("Product is unavailable or expired");
       } finally {
         setLoading(false);
       }
     };
+
     fetchPaymentData();
   }, [productId]);
 
@@ -82,15 +91,23 @@ function PaymentPage() {
     return () => clearInterval(interval);
   }, [timer]);
 
-  // 🔹 Форматування часу
   const formatTime = (ms) => {
     if (ms <= 0) return "Expired";
     const s = Math.floor(ms / 1000);
     return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m ${s % 60}s`;
   };
 
-  // 💳 PAY LOGIC
+  // 🔹 PAY
   const handlePay = async () => {
+    console.log("🟡 handlePay called");
+    console.log("🟡 product:", product);
+    console.log("🟡 product._id:", product?._id);
+
+    if (!product || !product._id) {
+      setNotification("Product not loaded yet");
+      return;
+    }
+
     if (!publicKey || !signTransaction) {
       setNotification("Please connect your wallet first");
       return;
@@ -100,16 +117,21 @@ function PaymentPage() {
       setPaying(true);
       setNotification("Preparing transaction…");
 
+      const payload = {
+        product_id: product._id,
+        buyer_wallet: publicKey.toString(),
+      };
+
+      console.log("📤 Sending payload to backend:", payload);
+
       const res = await fetch("http://127.0.0.1:5000/api/pay/prepare/sol", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          product_id: product._id,
-          buyer_wallet: publicKey.toString(),
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) throw new Error(await res.text());
+
       const { unsigned_transaction } = await res.json();
 
       const txBuffer = Buffer.from(unsigned_transaction, "hex");
@@ -118,12 +140,14 @@ function PaymentPage() {
       setNotification("Waiting for wallet confirmation…");
 
       const signedTx = await signTransaction(transaction);
-      const signature = await connection.sendRawTransaction(signedTx.serialize());
+      const signature = await connection.sendRawTransaction(
+        signedTx.serialize()
+      );
       await connection.confirmTransaction(signature);
 
       setNotification(`Payment sent ✔️ ${signature}`);
     } catch (err) {
-      console.error(err);
+      console.error("❌ Payment error:", err);
       setNotification(err.message || "Payment failed");
     } finally {
       setPaying(false);
@@ -136,7 +160,11 @@ function PaymentPage() {
   return (
     <div className="payment-page payment-page--double">
       <div className="payment-card">
-        <img src={product.image} alt={product.title} className="payment-card__image" />
+        <img
+          src={product.image}
+          alt={product.title}
+          className="payment-card__image"
+        />
         <h1 className="payment-card__title">{product.title}</h1>
 
         {product.description && (
@@ -169,7 +197,7 @@ function PaymentPage() {
 
         <button
           className="payment-card__pay-btn"
-          disabled={timer <= 0 || !publicKey || paying}
+          disabled={!publicKey || paying || timer <= 0}
           onClick={handlePay}
         >
           {timer <= 0 ? "Expired" : paying ? "Processing…" : "Pay now"}
@@ -186,7 +214,10 @@ function PaymentPage() {
       )}
 
       {notification && (
-        <Notification message={notification} onClose={() => setNotification("")} />
+        <Notification
+          message={notification}
+          onClose={() => setNotification("")}
+        />
       )}
     </div>
   );

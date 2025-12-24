@@ -15,10 +15,11 @@ from bson.objectid import ObjectId
 import requests
 import time
 import threading
-from solana.transaction import Transaction
-from solana.system_program import transfer, TransferParams
-from solana.publickey import PublicKey
 from solana.rpc.api import Client
+from solana.transaction import Transaction
+from solana.system_program import TransferParams, transfer
+from solana.publickey import PublicKey
+
 
 
 # ---------------- CONFIG ----------------
@@ -27,8 +28,6 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("JWT_SECRET")
 
 CORS(app, supports_credentials=True, origins=["http://localhost:3000"])
-
-PLATFORM_WALLET = os.getenv("PLATFORM_WALLET_ADDRESS")
 
 db_password = os.getenv("DB_PASSWORD")
 uri = f"mongodb+srv://neonflick-bps:{db_password}@cluster0.mhunksj.mongodb.net/?appName=Cluster0"
@@ -49,6 +48,11 @@ s3 = boto3.client(
     aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
     region_name=AWS_REGION,
 )
+
+PLATFORM_WALLET = os.getenv("PLATFORM_WALLET_ADDRESS")
+HELIUS_API_KEY = os.getenv("HELIUS_API_KEY")
+SOLANA_NETWORK = os.getenv("SOLANA_NETWORK")
+HELIUS_RPC_URL = f"{SOLANA_NETWORK}?api-key={HELIUS_API_KEY}"
 
 # ---------------- HELPERS ----------------
 def decode_token():
@@ -519,8 +523,7 @@ def get_payment_data(product_id):
 
 @app.route("/api/pay/prepare/sol", methods=["POST"])
 def prepare_sol_transaction():
-    data = request.json
-
+    data = request.json or {}
     product_id = data.get("product_id")
     buyer_wallet = data.get("buyer_wallet")
 
@@ -528,54 +531,60 @@ def prepare_sol_transaction():
         abort(400, description="Missing product_id or buyer_wallet")
 
     # 1️⃣ Product
-    product = products.find_one({"_id": ObjectId(product_id)})
+    try:
+        product = products.find_one({"_id": ObjectId(product_id)})
+    except Exception:
+        abort(400, description="Invalid product_id")
+
     if not product:
         abort(404, description="Product not found")
 
-    # 2️⃣ Expiration check (+30s buffer)
+    # 2️⃣ Expiration check
     expires_at = product.get("expires_at")
+    if not expires_at:
+        abort(500, description="Product expiration not set")
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
 
     now = datetime.now(timezone.utc)
-    remaining_seconds = (expires_at - now).total_seconds()
-
+    remaining_seconds = int((expires_at - now).total_seconds())
     if remaining_seconds <= 0:
         abort(410, description="Product expired")
-
     if remaining_seconds < 30:
-        abort(
-            409,
-            description="Not enough time left to safely process the transaction"
-        )
+        abort(409, description="Not enough time left to process transaction")
 
     # 3️⃣ Amounts
     price = float(product["price"])
     commission = float(product.get("commission", 0))
     seller_amount = price - commission
-
     if seller_amount <= 0:
         abort(500, description="Invalid commission configuration")
 
+    LAMPORTS = 1_000_000_000
     buyer = PublicKey(buyer_wallet)
     seller = PublicKey(product["wallet"])
     platform = PublicKey(PLATFORM_WALLET)
 
-    LAMPORTS = 1_000_000_000
+    # 4️⃣ Solana RPC
+    rpc_url = os.getenv("SOLANA_NETWORK")
+    print("🔥 Solana RPC URL:", rpc_url)
+    client = Client(rpc_url)
 
-    # 4️⃣ Build transaction
-    tx = Transaction()
+    try:
+        blockhash_resp = client.get_latest_blockhash()
+        print("🔥 Full blockhash response:", blockhash_resp)
+        blockhash = blockhash_resp['result']['value']['blockhash']
+    except Exception as e:
+        print("❌ Failed to fetch blockhash:", e)
+        abort(500, description=f"Failed to fetch latest blockhash: {e}")
 
-    tx.add(
-        transfer(
-            TransferParams(
-                from_pubkey=buyer,
-                to_pubkey=seller,
-                lamports=int(seller_amount * LAMPORTS)
-            )
-        )
-    )
+    print("🔥 Latest blockhash:", blockhash)
+    time.sleep(1)  # невелика пауза для стабільності
 
+    # 5️⃣ Build transaction
+    tx = Transaction(recent_blockhash=blockhash, fee_payer=buyer)
+
+    # Комісія платформі
     if commission > 0:
         tx.add(
             transfer(
@@ -587,19 +596,27 @@ def prepare_sol_transaction():
             )
         )
 
-    client = Client("https://api.devnet.solana.com")
-    tx.recent_blockhash = client.get_latest_blockhash()["result"]["value"]["blockhash"]
-    tx.fee_payer = buyer
+    # Сума продавцю
+    tx.add(
+        transfer(
+            TransferParams(
+                from_pubkey=buyer,
+                to_pubkey=seller,
+                lamports=int(seller_amount * LAMPORTS)
+            )
+        )
+    )
 
-    serialized_tx = tx.serialize(require_all_signatures=False).hex()
+    serialized_tx = tx.serialize().hex()
+    print("🔥 Serialized transaction (first 100 chars):", serialized_tx[:100])
 
     return jsonify({
         "unsigned_transaction": serialized_tx,
         "network": "solana",
-        "expires_in": int(remaining_seconds)
+        "rpc": "solana",
+        "blockhash": blockhash,
+        "expires_in": remaining_seconds,
     }), 200
-
-
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
-import { Connection, Transaction } from "@solana/web3.js";
+import { Connection, Transaction, SystemProgram, PublicKey } from "@solana/web3.js";
 import {
   WalletProvider,
   useWallet,
@@ -43,6 +43,7 @@ function PaymentPage() {
   const [timer, setTimer] = useState(0);
   const [descriptionOpen, setDescriptionOpen] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [txHash, setTxHash] = useState(""); // 🔹 Для хешу
 
   const connection = useMemo(
     () => new Connection("https://api.devnet.solana.com"),
@@ -53,22 +54,10 @@ function PaymentPage() {
   useEffect(() => {
     const fetchPaymentData = async () => {
       try {
-        console.log("📦 Fetching product:", productId);
-
         const res = await fetch(`http://127.0.0.1:5000/api/pay/${productId}`);
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
-
-        // 🔥 НОРМАЛІЗАЦІЯ
-        const normalizedProduct = {
-          ...data,
-          _id: data.product_id,
-        };
-
-        console.log("✅ Product loaded:", normalizedProduct);
-
-        setProduct(normalizedProduct);
-
+        setProduct({ ...data, _id: data.product_id });
         const expires = new Date(data.expires_at).getTime();
         setTimer(Math.max(expires - Date.now(), 0));
       } catch (err) {
@@ -78,7 +67,6 @@ function PaymentPage() {
         setLoading(false);
       }
     };
-
     fetchPaymentData();
   }, [productId]);
 
@@ -99,53 +87,47 @@ function PaymentPage() {
 
   // 🔹 PAY
   const handlePay = async () => {
-    console.log("🟡 handlePay called");
-    console.log("🟡 product:", product);
-    console.log("🟡 product._id:", product?._id);
-
-    if (!product || !product._id) {
-      setNotification("Product not loaded yet");
-      return;
-    }
-
-    if (!publicKey || !signTransaction) {
-      setNotification("Please connect your wallet first");
-      return;
-    }
+    if (!product || !product._id) return setNotification("Product not loaded");
+    if (!publicKey || !signTransaction) return setNotification("Connect wallet first");
 
     try {
       setPaying(true);
       setNotification("Preparing transaction…");
-
-      const payload = {
-        product_id: product._id,
-        buyer_wallet: publicKey.toString(),
-      };
-
-      console.log("📤 Sending payload to backend:", payload);
+      setTxHash(""); // очистка попереднього хешу
 
       const res = await fetch("http://127.0.0.1:5000/api/pay/prepare/sol", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          product_id: product._id,
+          buyer_wallet: publicKey.toString(),
+        }),
       });
-
       if (!res.ok) throw new Error(await res.text());
+      const { blockhash, fee_payer, transfers } = await res.json();
 
-      const { unsigned_transaction } = await res.json();
+      const tx = new Transaction({ recentBlockhash: blockhash, feePayer: publicKey });
 
-      const txBuffer = Buffer.from(unsigned_transaction, "hex");
-      const transaction = Transaction.from(txBuffer);
+      transfers.forEach(t => {
+        if (t.to && t.lamports > 0) {
+          tx.add(
+            SystemProgram.transfer({
+              fromPubkey: publicKey,
+              toPubkey: new PublicKey(t.to),
+              lamports: t.lamports,
+            })
+          );
+        }
+      });
 
       setNotification("Waiting for wallet confirmation…");
 
-      const signedTx = await signTransaction(transaction);
-      const signature = await connection.sendRawTransaction(
-        signedTx.serialize()
-      );
+      const signedTx = await signTransaction(tx);
+      const signature = await connection.sendRawTransaction(signedTx.serialize());
       await connection.confirmTransaction(signature);
 
-      setNotification(`Payment sent ✔️ ${signature}`);
+      setTxHash(signature); // 🔹 зберігаємо хеш
+      setNotification(`Payment sent ✔️`);
     } catch (err) {
       console.error("❌ Payment error:", err);
       setNotification(err.message || "Payment failed");
@@ -202,6 +184,19 @@ function PaymentPage() {
         >
           {timer <= 0 ? "Expired" : paying ? "Processing…" : "Pay now"}
         </button>
+
+        {txHash && (
+          <div className="payment-card__txhash">
+            🔗 View on Solscan:{" "}
+            <a
+              href={`https://solscan.io/tx/${txHash}?cluster=devnet`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {txHash}
+            </a>
+          </div>
+        )}
       </div>
 
       {descriptionOpen && (

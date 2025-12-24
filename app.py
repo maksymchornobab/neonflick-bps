@@ -530,7 +530,6 @@ def prepare_sol_transaction():
     if not product_id or not buyer_wallet:
         abort(400, description="Missing product_id or buyer_wallet")
 
-    # 1️⃣ Product
     try:
         product = products.find_one({"_id": ObjectId(product_id)})
     except Exception:
@@ -539,7 +538,6 @@ def prepare_sol_transaction():
     if not product:
         abort(404, description="Product not found")
 
-    # 2️⃣ Expiration check
     expires_at = product.get("expires_at")
     if not expires_at:
         abort(500, description="Product expiration not set")
@@ -553,7 +551,6 @@ def prepare_sol_transaction():
     if remaining_seconds < 30:
         abort(409, description="Not enough time left to process transaction")
 
-    # 3️⃣ Amounts
     price = float(product["price"])
     commission = float(product.get("commission", 0))
     seller_amount = price - commission
@@ -565,58 +562,25 @@ def prepare_sol_transaction():
     seller = PublicKey(product["wallet"])
     platform = PublicKey(PLATFORM_WALLET)
 
-    # 4️⃣ Solana RPC
-    rpc_url = os.getenv("SOLANA_NETWORK")
-    print("🔥 Solana RPC URL:", rpc_url)
-    client = Client(rpc_url)
-
+    client = Client(os.getenv("SOLANA_NETWORK"))
     try:
         blockhash_resp = client.get_latest_blockhash()
-        print("🔥 Full blockhash response:", blockhash_resp)
-        blockhash = blockhash_resp['result']['value']['blockhash']
+        blockhash = str(blockhash_resp.value.blockhash)
     except Exception as e:
-        print("❌ Failed to fetch blockhash:", e)
         abort(500, description=f"Failed to fetch latest blockhash: {e}")
 
-    print("🔥 Latest blockhash:", blockhash)
-    time.sleep(1)  # невелика пауза для стабільності
-
-    # 5️⃣ Build transaction
-    tx = Transaction(recent_blockhash=blockhash, fee_payer=buyer)
-
-    # Комісія платформі
+    transfers = []
     if commission > 0:
-        tx.add(
-            transfer(
-                TransferParams(
-                    from_pubkey=buyer,
-                    to_pubkey=platform,
-                    lamports=int(commission * LAMPORTS)
-                )
-            )
-        )
-
-    # Сума продавцю
-    tx.add(
-        transfer(
-            TransferParams(
-                from_pubkey=buyer,
-                to_pubkey=seller,
-                lamports=int(seller_amount * LAMPORTS)
-            )
-        )
-    )
-
-    serialized_tx = tx.serialize().hex()
-    print("🔥 Serialized transaction (first 100 chars):", serialized_tx[:100])
+        transfers.append({"to": str(platform), "lamports": int(commission * LAMPORTS)})
+    transfers.append({"to": str(seller), "lamports": int(seller_amount * LAMPORTS)})
 
     return jsonify({
-        "unsigned_transaction": serialized_tx,
-        "network": "solana",
-        "rpc": "solana",
         "blockhash": blockhash,
+        "fee_payer": str(buyer),
+        "transfers": transfers,
         "expires_in": remaining_seconds,
     }), 200
+
 
 
 if __name__ == "__main__":

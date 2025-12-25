@@ -452,7 +452,7 @@ body {
   transition: all 0.3s ease;
 
   width: 280px;
-  height: 470px;
+  min-height: 470px;
 }
 
 .product-image-wrapper {
@@ -552,7 +552,8 @@ body {
   font-size: 0.85rem;
   padding: 3px 8px;
   border-radius: 12px;
-  margin-top: 5px;
+  margin-top: 14px;
+  margin-bottom: 14px;
   text-align: center;
   min-width: 60px;
   
@@ -1116,4 +1117,70 @@ body {
   line-height: 1.4;
 }
 
+.additional-info-toggle {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #00ffff;
+  color: #00ffff;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.3s, box-shadow 0.3s;
+}
 
+.additional-info-toggle:hover {
+  background: rgba(0, 255, 255, 0.1);
+  box-shadow: 0 0 10px #00ffff;
+}
+
+.additional-info-box {
+  border: 1px solid #00ffff;
+  border-top: none;
+  padding: 10px;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.6);
+  font-size: 13px;
+}
+
+.additional-info-box div {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.additional-info-box span {
+  color: #00ffff;
+}
+
+.additional-info-box strong {
+  color: #ffffff;
+}
+
+.arrow {
+  transition: transform 0.3s;
+}
+
+.arrow.open {
+  transform: rotate(180deg);
+}
+
+.wallet-adapter-button {
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    font-family: 'DM Sans', 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    height: 48px;
+    line-height: 48px;
+    padding: 0 24px;
+    border-radius: 4px;
+    width: 336px;
+    justify-content: center;
+}

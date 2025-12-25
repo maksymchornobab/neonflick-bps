@@ -14,8 +14,11 @@ export default function ProductsSection({ onEdit }) {
   const [sortOrder, setSortOrder] = useState("desc");
   const [chooseMode, setChooseMode] = useState(false);
 
-  // 🔹 Таймери стану
+  // 🔹 Таймери
   const [timers, setTimers] = useState({});
+
+  // 🔹 Additional Information toggle
+  const [openInfoId, setOpenInfoId] = useState(null);
 
   useEffect(() => {
     fetchProducts();
@@ -52,6 +55,7 @@ export default function ProductsSection({ onEdit }) {
   };
 
   const toggleMenu = (id) => setOpenMenuId(openMenuId === id ? null : id);
+  const toggleInfo = (id) => setOpenInfoId(openInfoId === id ? null : id);
 
   const handleEdit = (product) => onEdit(product);
 
@@ -185,7 +189,9 @@ export default function ProductsSection({ onEdit }) {
       <div className="products-grid">
         {displayedProducts.map((product) => (
           <div
-            className={`product-card ${chooseMode && selectedProducts.includes(product.id) ? "selected" : ""}`}
+            className={`product-card ${
+              chooseMode && selectedProducts.includes(product.id) ? "selected" : ""
+            }`}
             key={product.id}
           >
             {chooseMode && (
@@ -206,22 +212,49 @@ export default function ProductsSection({ onEdit }) {
               <p className="product-description">{product.description}</p>
 
               <div className="product-footer">
-                <span className="product-price">{product.price} {product.currency}</span>
+                <span className="product-price">
+                  {product.price} {product.currency}
+                </span>
                 <span className="product-date">{product.created_at}</span>
               </div>
 
-              {/* 🔹 Таймер відліку */}
+              {/* 🔹 ADDITIONAL INFORMATION */}
+              <div
+                className="additional-info-toggle"
+                onClick={() => toggleInfo(product.id)}
+              >
+                Additional Information
+                <span className={`info-arrow ${openInfoId === product.id ? "open" : ""}`}>
+                  ▾
+                </span>
+              </div>
+
+              {openInfoId === product.id && (
+                <div className="additional-info-box">
+                  <div>
+                    <span>Status</span>
+                    <strong>{product.stats?.status || "—"}</strong>
+                  </div>
+                  <div>
+                    <span>Completed Transactions</span>
+                    <strong>{product.stats?.count ?? 0}</strong>
+                  </div>
+                </div>
+              )}
+
+              {/* 🔹 Таймер */}
               <div className="product-timer">
-                {timers[product.id] !== undefined ? formatTime(timers[product.id]) : ""}
+                {timers[product.id] !== undefined
+                  ? formatTime(timers[product.id])
+                  : ""}
               </div>
 
               <button
-  className="product-button"
-  onClick={() => navigate(`/pay/${product.id}`)}
->
-  View
-</button>
-
+                className="product-button"
+                onClick={() => navigate(`/pay/${product.id}`)}
+              >
+                View
+              </button>
             </div>
 
             <div className="three-dots-container">

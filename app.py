@@ -305,17 +305,16 @@ def get_products():
     for item in items:
         created_at_raw = item.get("created_at")
 
-        # Перетворюємо у datetime, якщо це ще не рядок у потрібному форматі
         if isinstance(created_at_raw, datetime):
             created_at_str = created_at_raw.strftime("%d.%m.%Y")
         else:
             try:
-                # спробуємо розпарсити рядок у datetime
                 created_at_dt = datetime.fromisoformat(created_at_raw)
                 created_at_str = created_at_dt.strftime("%d.%m.%Y")
             except Exception:
-                # якщо не вдалося, залишаємо як є
                 created_at_str = str(created_at_raw)
+
+        stats = item.get("stats", {})
 
         result.append({
             "wallet": item.get("wallet"),
@@ -326,9 +325,15 @@ def get_products():
             "currency": item.get("currency"),
             "image": item.get("image"),
             "created_at": created_at_str,
-            "expires_at": item.get("expires_at")
-        })
+            "expires_at": item.get("expires_at"),
 
+            # 👇 додали stats
+            "stats": {
+                "status": stats.get("status"),
+                "count": stats.get("count", 0)
+            }
+        })
+        
     return jsonify({"products": result})
 
 

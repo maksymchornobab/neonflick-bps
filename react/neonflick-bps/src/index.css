@@ -984,7 +984,7 @@ body {
 
 /* 📊 Details */
 .payment-card__details {
-  margin-bottom: 14px;
+  margin-bottom: 3px;
 }
 
 .payment-card__details div {
@@ -1183,4 +1183,58 @@ body {
     border-radius: 4px;
     width: 336px;
     justify-content: center;
+}
+
+.payment-card__additional-toggle {
+  padding: 10px 12px;
+  border: 1px solid #00ffff;
+  color: #00ffff;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: box-shadow 0.3s, background 0.3s;
+}
+
+.payment-card__additional-toggle:hover {
+  background: rgba(0, 255, 255, 0.1);
+  box-shadow: 0 0 12px #00ffff;
+}
+
+.payment-card__additional-box {
+  border: 1px solid #00ffff;
+  border-top: none;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.65);
+  font-size: 13px;
+}
+
+.payment-card__additional-box div {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  word-break: break-all;
+}
+
+.payment-card__additional-box span {
+  color: #00ffff;
+}
+
+.payment-card__additional-box strong {
+  color: #ffffff;
+}
+
+.payment-card__additional-toggle .arrow {
+  transition: transform 0.3s;
+}
+
+.payment-card__additional-toggle .arrow.open {
+  transform: rotate(180deg);
+}
+
+.payment-card__timer {
+  margin-top: 15px;
 }

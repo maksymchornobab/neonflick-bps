@@ -16,7 +16,13 @@ import {
 import Notification from "../components/Notification";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
-// 🔹 Wrapper (SOLANA ONLY)
+// 🔹 Wallet formatter
+const formatWallet = (wallet) => {
+  if (!wallet || wallet.length < 8) return wallet || "";
+  return `${wallet.slice(0, 4)}****${wallet.slice(-4)}`;
+};
+
+// 🔹 Wrapper
 export default function PaymentPageWrapper() {
   const wallets = useMemo(
     () => [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
@@ -42,31 +48,35 @@ function PaymentPage() {
   const [notification, setNotification] = useState("");
   const [timer, setTimer] = useState(0);
   const [descriptionOpen, setDescriptionOpen] = useState(false);
+  const [additionalOpen, setAdditionalOpen] = useState(false);
   const [paying, setPaying] = useState(false);
-  const [txHash, setTxHash] = useState(""); // 🔹 Для хешу
+  const [txHash, setTxHash] = useState("");
 
   const connection = useMemo(
     () => new Connection("https://api.devnet.solana.com"),
     []
   );
 
-  // 🔹 Fetch product
+  // 🔹 Fetch
   useEffect(() => {
     const fetchPaymentData = async () => {
       try {
         const res = await fetch(`http://127.0.0.1:5000/api/pay/${productId}`);
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
+
         setProduct({ ...data, _id: data.product_id });
+
         const expires = new Date(data.expires_at).getTime();
         setTimer(Math.max(expires - Date.now(), 0));
       } catch (err) {
-        console.error("❌ Fetch error:", err);
+        console.error(err);
         setError("Product is unavailable or expired");
       } finally {
         setLoading(false);
       }
     };
+
     fetchPaymentData();
   }, [productId]);
 
@@ -93,7 +103,7 @@ function PaymentPage() {
     try {
       setPaying(true);
       setNotification("Preparing transaction…");
-      setTxHash(""); // очистка попереднього хешу
+      setTxHash("");
 
       const res = await fetch("http://127.0.0.1:5000/api/pay/prepare/sol", {
         method: "POST",
@@ -103,8 +113,9 @@ function PaymentPage() {
           buyer_wallet: publicKey.toString(),
         }),
       });
+
       if (!res.ok) throw new Error(await res.text());
-      const { blockhash, fee_payer, transfers } = await res.json();
+      const { blockhash, transfers } = await res.json();
 
       const tx = new Transaction({ recentBlockhash: blockhash, feePayer: publicKey });
 
@@ -126,10 +137,10 @@ function PaymentPage() {
       const signature = await connection.sendRawTransaction(signedTx.serialize());
       await connection.confirmTransaction(signature);
 
-      setTxHash(signature); // 🔹 зберігаємо хеш
-      setNotification(`Payment sent ✔️`);
+      setTxHash(signature);
+      setNotification("Payment sent ✔️");
     } catch (err) {
-      console.error("❌ Payment error:", err);
+      console.error(err);
       setNotification(err.message || "Payment failed");
     } finally {
       setPaying(false);
@@ -142,11 +153,7 @@ function PaymentPage() {
   return (
     <div className="payment-page payment-page--double">
       <div className="payment-card">
-        <img
-          src={product.image}
-          alt={product.title}
-          className="payment-card__image"
-        />
+        <img src={product.image} alt={product.title} className="payment-card__image" />
         <h1 className="payment-card__title">{product.title}</h1>
 
         {product.description && (
@@ -168,6 +175,28 @@ function PaymentPage() {
             <strong>{product.price} {product.currency}</strong>
           </div>
         </div>
+
+        {/* 🔹 ADDITIONAL INFO */}
+        <div
+          className="payment-card__additional-toggle"
+          onClick={() => setAdditionalOpen(o => !o)}
+        >
+          Additional Info
+          <span className={`arrow ${additionalOpen ? "open" : ""}`}>▾</span>
+        </div>
+
+        {additionalOpen && (
+          <div className="payment-card__additional-box">
+            <div>
+              <span>Seller wallet</span>
+              <strong>{formatWallet(product.sellerWallet)}</strong>
+            </div>
+            <div>
+              <span>Commission paid by seller</span>
+              <strong>{product.commission} {product.currency}</strong>
+            </div>
+          </div>
+        )}
 
         <div className="payment-card__timer">
           Time left: {formatTime(timer)}
@@ -209,10 +238,7 @@ function PaymentPage() {
       )}
 
       {notification && (
-        <Notification
-          message={notification}
-          onClose={() => setNotification("")}
-        />
+        <Notification message={notification} onClose={() => setNotification("")} />
       )}
     </div>
   );

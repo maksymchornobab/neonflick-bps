@@ -1066,7 +1066,7 @@ body {
 /* 💳 Окреме вікно для description */
 .payment-card--description {
   width: 380px;
-  height: 595.67px;
+  height: 615.77px;
   background: rgba(0, 30, 30, 0.55);
   backdrop-filter: blur(14px);
   border-radius: 18px;
@@ -1244,3 +1244,212 @@ body {
   color: #00ffff;
   font-weight: bold;
 }
+
+.success-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.success-modal {
+  width: 380px;
+  height: 552.77px;
+  background: radial-gradient(
+    circle at top,
+    rgba(0, 255, 255, 0.28),
+    #050505
+  );
+  border: 1px solid #00ffff;
+  border-radius: 18px;
+  padding: 32px 24px;
+  box-shadow: 0 0 40px rgba(0, 255, 255, 0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  text-align: center;
+  color: #e6ffff;
+}
+
+.success-icon {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  border: 2px solid #00ffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 42px;
+  color: #00ffff;
+  box-shadow: 0 0 25px rgba(0, 255, 255, 0.7);
+}
+
+.success-title {
+  font-size: 22px;
+  letter-spacing: 0.04em;
+}
+
+.success-link {
+  color: #00ffff;
+  text-decoration: none;
+  font-size: 15px;
+  border-bottom: 1px solid transparent;
+  transition: 0.2s;
+}
+
+.success-link:hover {
+  border-color: #00ffff;
+}
+
+.success-actions {
+  margin-top: auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.btn-primary,
+.btn-secondary {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.25s;
+}
+
+.btn-primary {
+  background: #00ffff;
+  border: none;
+  color: #000;
+}
+
+.btn-primary:hover {
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.9);
+}
+
+.btn-secondary {
+  background: transparent;
+  border: 1px solid #00ffff;
+  color: #00ffff;
+}
+
+.btn-secondary:hover {
+  background: rgba(0, 255, 255, 0.1);
+}
+
+.tx-overlay {
+  position: absolute;
+  top: 403px;
+  right: 18px;
+  width: 242px;
+  height: 126px;
+  background-color: rgba(0, 0, 0, 0.9);
+  border: 1px solid #00ffff;
+  padding: 8px;
+  z-index: 1000;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.tx-overlay-header {
+  display: flex;
+  justify-content: center; /* заголовок по центру */
+  align-items: center;
+  position: relative;
+}
+
+.tx-overlay-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: none;
+  border: none;
+  color: #00ffff;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.tx-h2 {
+  color: #00ffff;
+  font-size: 15px;
+  margin-left: 67px;
+}
+
+.tx-overlay-content {
+  overflow-y: auto;
+  flex-grow: 1;
+  padding-right: 4px; /* щоб скрол не перекривав текст */
+  padding-left: 22px; /* відступ для нумерації */
+  list-style-type: decimal; /* цифри */
+}
+
+.tx-overlay-content li {
+  margin-bottom: 4px; /* відстань між хешами */
+  color: #00ffff;
+  cursor: pointer;
+  font-family: monospace;
+}
+
+.tx-overlay-content li:hover {
+  text-decoration: underline;
+}
+
+
+.tx-hash {
+  color: #00ffff;
+  cursor: pointer;
+  font-family: monospace;
+}
+
+.tx-hash:hover {
+  text-decoration: underline;
+}
+
+.transactions-toggle {
+  text-decoration: underline;
+  color: #00ffff;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.receipt-warning {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border: 1px solid #ff9800;
+  background: rgba(255, 152, 0, 0.08);
+  border-radius: 8px;
+  color: #ffb74d;
+}
+
+.receipt-warning p {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
+.receipt-success {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  border: 1px solid #4caf50;
+  background: rgba(76, 175, 80, 0.1);
+  border-radius: 8px;
+  color: #81c784;
+  font-size: 13px;
+}
+
+.btn-primary.warning {
+  background-color: #ff9800;
+}
+

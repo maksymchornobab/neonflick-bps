@@ -31,3 +31,4 @@ url
 browserify-zlib
 constants-browserify
 querystring-es3
+fpdf2

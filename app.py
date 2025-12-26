@@ -1,5 +1,5 @@
 from pymongo.mongo_client import MongoClient
-from flask import Flask, jsonify, request, abort
+from flask import Flask, jsonify, request, abort, send_file
 from flask_cors import CORS
 import os
 from dotenv import load_dotenv
@@ -19,8 +19,7 @@ from solana.rpc.api import Client
 from solana.transaction import Transaction
 from solana.system_program import TransferParams, transfer
 from solana.publickey import PublicKey
-
-
+from fpdf import FPDF
 
 # ---------------- CONFIG ----------------
 load_dotenv()
@@ -241,7 +240,7 @@ def create_product():
     commission = calculate_sol_commission(price)
 
     # ---------- РОЗРАХУНОК ОСТАННЬОЇ СУМИ (NET) ----------
-    final_price = round(price - commission, 9)
+    final_price = round(price - commission, 4)
 
     if final_price <= 0:
         return jsonify({"error": "final price must be greater than 0"}), 400
@@ -331,6 +330,7 @@ def get_products():
     for item in items:
         created_at_raw = item.get("created_at")
 
+        # Форматування дати
         if isinstance(created_at_raw, datetime):
             created_at_str = created_at_raw.strftime("%d.%m.%Y")
         else:
@@ -355,13 +355,14 @@ def get_products():
             "commission": item.get("commission"),
             "final_price": item.get("final_price"),
 
-            # 👇 додали stats
+            # 👇 додали stats з транзакціями
             "stats": {
                 "status": stats.get("status"),
-                "count": stats.get("count", 0)
+                "count": stats.get("count", 0),
+                "transactions": stats.get("transactions", [])  # повертаємо список хешів
             }
         })
-        
+
     return jsonify({"products": result})
 
 
@@ -613,6 +614,165 @@ def prepare_sol_transaction():
         "transfers": transfers,
         "expires_in": remaining_seconds,
     }), 200
+
+@app.route("/api/products/<product_id>/transaction", methods=["POST"])
+def add_product_transaction(product_id):
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "JSON body required"}), 400
+
+    tx_hash = data.get("tx_hash")
+    if not tx_hash:
+        return jsonify({"error": "tx_hash required"}), 400
+
+    try:
+        product_object_id = ObjectId(product_id)
+    except Exception:
+        return jsonify({"error": "invalid product_id"}), 400
+
+    product = products.find_one({"_id": product_object_id})
+    if not product:
+        return jsonify({"error": "product not found"}), 404
+
+    # 🔒 захист від дублювання транзакції
+    stats = product.get("stats", {})
+    existing_hashes = stats.get("transactions", [])
+    if tx_hash in existing_hashes:
+        return jsonify({"error": "transaction already recorded"}), 409
+
+    result = products.update_one(
+        {"_id": product_object_id},
+        {
+            "$set": {"stats.status": "used"},
+            "$inc": {"stats.count": 1},
+            "$push": {"stats.transactions": tx_hash},
+        }
+    )
+
+    if result.modified_count == 0:
+        return jsonify({"error": "update failed"}), 500
+
+    return jsonify({
+        "success": True,
+        "product_id": product_id,
+        "tx_hash": tx_hash
+    }), 200
+
+
+@app.route("/api/generate-receipt", methods=["POST"])
+def generate_receipt():
+    data = request.get_json()
+
+    # 🔹 Перевірка обов'язкових полів
+    required_fields = [
+        "product_id", "title", "price", "currency",
+        "sellerWallet", "buyer_wallet", "tx_hash", "image"
+    ]
+    missing = [f for f in required_fields if f not in data]
+    if missing:
+        return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
+
+    pdf = FPDF('P', 'mm', 'A4')
+    pdf.add_page()
+
+    # 🔲 ЧОРНИЙ ФОН
+    pdf.set_fill_color(0, 0, 0)
+    pdf.rect(0, 0, pdf.w, pdf.h, 'F')
+
+    pdf.set_auto_page_break(auto=True, margin=15)
+
+    # 🎨 КОЛЬОРИ
+    CYAN = (0, 255, 255)
+    WHITE = (255, 255, 255)
+
+    pdf.set_draw_color(*CYAN)
+    pdf.set_font("Arial", '', 12)
+
+    # 🔹 Заголовок (cyan)
+    pdf.set_text_color(*CYAN)
+    pdf.set_font("Arial", 'B', 18)
+    pdf.cell(0, 12, "Payment Receipt", ln=True, align='C')
+    pdf.ln(6)
+
+    # 🔹 Лінія під заголовком
+    pdf.set_draw_color(*CYAN)
+    y = pdf.get_y()
+    pdf.line(15, y, 195, y)
+    pdf.ln(8)
+
+
+    # 🔹 Картинка продукту + рамка
+    try:
+        response = requests.get(data["image"])
+        response.raise_for_status()
+        img_buffer = io.BytesIO(response.content)
+
+        img_width = 100
+        img_height = 60
+        x_pos = (pdf.w - img_width) / 2
+        y_pos = pdf.get_y()
+
+        pdf.image(img_buffer, x=x_pos, y=y_pos, w=img_width, h=img_height)
+
+        # рамка
+        pdf.rect(x_pos, y_pos, img_width, img_height)
+
+        pdf.ln(img_height + 6)
+
+    except Exception as e:
+        print("Failed to load image:", e)
+
+    page_width = pdf.w - 2 * pdf.l_margin
+    label_width = 50
+
+    # 🔹 Функція для рядків
+    def add_row(label, value):
+        # заголовок — CYAN
+        pdf.set_text_color(*CYAN)
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(label_width, 8, label, ln=False)
+
+        # значення — WHITE
+        pdf.ln(8)
+        pdf.set_text_color(*WHITE)
+        pdf.set_font("Arial", '', 12)
+        pdf.multi_cell(page_width, 8, str(value))
+
+        pdf.ln(2)
+
+    # 🔹 Дані у потрібному порядку
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    add_row("Date:", now_str)
+    add_row("Product Name:", data.get("title"))
+    add_row("Description:", data.get("description", ""))
+    add_row("Price:", f"{data.get('price')} {data.get('currency')}")
+    add_row("Buyer Wallet Address:", data.get("buyer_wallet"))
+    add_row("Seller Wallet Address:", data.get("sellerWallet"))
+    add_row("Commission (Paid by Seller):", f"{data.get('commission', 0)} {data.get('currency')}")
+    add_row("Transaction Hash:", data.get("tx_hash"))
+
+    # 🔹 Розділювальна лінія
+    pdf.ln(4)
+    pdf.set_draw_color(*CYAN)
+    pdf.line(15, pdf.get_y(), 195, pdf.get_y())
+
+    # 🔹 Powered by
+    pdf.ln(6)
+    pdf.set_text_color(*CYAN)
+    pdf.set_font("Arial", 'I', 9)
+    pdf.cell(0, 6, "Powered by Neonflick-bps", align="C")
+
+    # 🔹 Зберігаємо PDF
+    pdf_buffer = io.BytesIO()
+    pdf.output(pdf_buffer)
+    pdf_buffer.seek(0)
+
+    return send_file(
+    pdf_buffer,
+    as_attachment=True,
+    download_name="e-receipt.pdf",
+    mimetype="application/pdf"
+)
 
 
 

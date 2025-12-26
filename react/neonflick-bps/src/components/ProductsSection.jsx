@@ -16,9 +16,10 @@ export default function ProductsSection({ onEdit }) {
 
   // 🔹 Таймери
   const [timers, setTimers] = useState({});
-
   // 🔹 Additional Information toggle
   const [openInfoId, setOpenInfoId] = useState(null);
+  // 🔹 Overlay хешів
+  const [txOverlayId, setTxOverlayId] = useState(null);
 
   useEffect(() => {
     fetchProducts();
@@ -120,6 +121,18 @@ export default function ProductsSection({ onEdit }) {
     return `${hours}h ${minutes}m ${seconds}s`;
   };
 
+  // ✅ ВИПРАВЛЕНО: notification показується КОЖЕН раз
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setNotification("");
+      setTimeout(() => {
+        setNotification(
+          `Tx copied: ${text.slice(0, 6)}...${text.slice(-4)}`
+        );
+      }, 10);
+    });
+  };
+
   if (loading) return <p className="products-loading">Loading products...</p>;
   if (products.length === 0) return <p className="products-empty">No products yet</p>;
 
@@ -196,6 +209,7 @@ export default function ProductsSection({ onEdit }) {
             }`}
             key={product.id}
           >
+
             {chooseMode && (
               <input
                 type="checkbox"
@@ -260,6 +274,43 @@ export default function ProductsSection({ onEdit }) {
                     <span>Completed Transactions</span>
                     <strong>{product.stats?.count ?? 0}</strong>
                   </div>
+
+                  {product.stats?.transactions?.length > 0 && (
+                    <div
+                      className="transactions-toggle"
+                      onClick={() => setTxOverlayId(txOverlayId === product.id ? null : product.id)}
+                    >
+                      Transaction hashes:
+                    </div>
+                  )}
+
+                  {txOverlayId === product.id && (
+                    <div className="tx-overlay">
+  <div className="tx-overlay-header">
+    <h2 className="tx-h2">Tx-hashes</h2>
+    <button
+      className="tx-overlay-close"
+      onClick={() => setTxOverlayId(null)}
+    >
+      ✕
+    </button>
+  </div>
+  <ul className="tx-overlay-content">
+  {product.stats.transactions.map((tx, idx) => (
+    <li
+      key={idx}
+      className="tx-hash"
+      onClick={() => copyToClipboard(tx)}
+    >
+      {tx.slice(0, 20) + "..."}
+    </li>
+  ))}
+</ul>
+
+</div>
+
+
+                  )}
                 </div>
               )}
 

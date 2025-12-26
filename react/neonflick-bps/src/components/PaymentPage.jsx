@@ -14,6 +14,7 @@ import {
   SolflareWalletAdapter,
 } from "@solana/wallet-adapter-wallets";
 import Notification from "../components/Notification";
+import SuccessModal from "../components/SuccessModal";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 // 🔹 Wallet formatter
@@ -51,20 +52,20 @@ function PaymentPage() {
   const [additionalOpen, setAdditionalOpen] = useState(false);
   const [paying, setPaying] = useState(false);
   const [txHash, setTxHash] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const connection = useMemo(
     () => new Connection("https://api.devnet.solana.com"),
     []
   );
 
-  // 🔹 Fetch
+  // 🔹 Fetch product
   useEffect(() => {
     const fetchPaymentData = async () => {
       try {
         const res = await fetch(`http://127.0.0.1:5000/api/pay/${productId}`);
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
-
         setProduct({ ...data, _id: data.product_id });
 
         const expires = new Date(data.expires_at).getTime();
@@ -97,7 +98,7 @@ function PaymentPage() {
 
   // 🔹 PAY
   const handlePay = async () => {
-    if (!product || !product._id) return setNotification("Product not loaded");
+    if (!product?._id) return setNotification("Product not loaded");
     if (!publicKey || !signTransaction) return setNotification("Connect wallet first");
 
     try {
@@ -137,8 +138,16 @@ function PaymentPage() {
       const signature = await connection.sendRawTransaction(signedTx.serialize());
       await connection.confirmTransaction(signature);
 
+      // ✅ Update product on backend
+      await fetch(`http://127.0.0.1:5000/api/products/${product._id}/transaction`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tx_hash: signature }),
+      });
+
       setTxHash(signature);
-      setNotification("Payment sent ✔️");
+      setShowSuccess(true);
+      setNotification("");
     } catch (err) {
       console.error(err);
       setNotification(err.message || "Payment failed");
@@ -176,7 +185,6 @@ function PaymentPage() {
           </div>
         </div>
 
-        {/* 🔹 ADDITIONAL INFO */}
         <div
           className="payment-card__additional-toggle"
           onClick={() => setAdditionalOpen(o => !o)}
@@ -213,19 +221,6 @@ function PaymentPage() {
         >
           {timer <= 0 ? "Expired" : paying ? "Processing…" : "Pay now"}
         </button>
-
-        {txHash && (
-          <div className="payment-card__txhash">
-            🔗 View on Solscan:{" "}
-            <a
-              href={`https://solscan.io/tx/${txHash}?cluster=devnet`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {txHash}
-            </a>
-          </div>
-        )}
       </div>
 
       {descriptionOpen && (
@@ -239,6 +234,24 @@ function PaymentPage() {
 
       {notification && (
         <Notification message={notification} onClose={() => setNotification("")} />
+      )}
+
+      {showSuccess && (
+        <SuccessModal
+          txHash={txHash}
+          product={{
+            id: product._id,
+            title: product.title,
+            price: product.price,
+            currency: product.currency,
+            commission: product.commission,
+            description: product.description,
+            wallet: product.sellerWallet,
+            image: product.image,
+            expires_at: product.expires_at
+          }}
+          buyerWallet={publicKey.toString()}
+        />
       )}
     </div>
   );

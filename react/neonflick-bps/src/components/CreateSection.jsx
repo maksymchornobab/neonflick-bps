@@ -11,13 +11,15 @@ export default function CreateSection() {
   const [imagePreview, setImagePreview] = useState(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [duration, setDuration] = useState(""); // 🔹 тривалість життя товару
+  const [duration, setDuration] = useState("");
   const [price, setPrice] = useState("");
   const [currency, setCurrency] = useState("");
-  const [commission, setCommission] = useState(null);
-  const [loading, setLoading] = useState(false);
 
-  const [notification, setNotification] = useState(""); 
+  const [commission, setCommission] = useState(null);
+  const [finalPrice, setFinalPrice] = useState(null); // ✅ ОСТАННЯ ЦІНА
+
+  const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState("");
   const maxProductsReached = products.length >= 10;
 
   useEffect(() => {
@@ -31,11 +33,12 @@ export default function CreateSection() {
   }, []);
 
   useEffect(() => {
-    // 🔹 Обчислюємо комісію тільки для SOL
+    // 🔹 Live калькуляція для SOL
     if (currency === "SOL" && price) {
       calculateCommission(price);
     } else {
       setCommission(null);
+      setFinalPrice(null);
     }
   }, [price, currency]);
 
@@ -56,14 +59,18 @@ export default function CreateSection() {
         `http://127.0.0.1:5000/calculate_commission_sol?price=${priceValue}`
       );
       const data = await res.json();
+
       if (res.ok) {
         setCommission(data.commission);
+        setFinalPrice(data.final_price); // ✅
       } else {
         setCommission(null);
+        setFinalPrice(null);
       }
     } catch (err) {
       console.error(err);
       setCommission(null);
+      setFinalPrice(null);
     }
   };
 
@@ -86,8 +93,10 @@ export default function CreateSection() {
     let value = e.target.value;
     if (!/^[0-9.]*$/.test(value)) return;
     if ((value.match(/\./g) || []).length > 1) return;
+
     const [int = "", dec = ""] = value.split(".");
     if (int.length > 7 || dec.length > 3) return;
+
     setPrice(value);
   };
 
@@ -100,7 +109,14 @@ export default function CreateSection() {
     }
 
     const numPrice = parseFloat(price);
-    if (!image || !title.trim() || !description.trim() || isNaN(numPrice) || !currency || !duration) {
+    if (
+      !image ||
+      !title.trim() ||
+      !description.trim() ||
+      isNaN(numPrice) ||
+      !currency ||
+      !duration
+    ) {
       setNotification("Please fill all required fields");
       return;
     }
@@ -111,7 +127,7 @@ export default function CreateSection() {
     formData.append("description", description);
     formData.append("price", numPrice.toFixed(3));
     formData.append("currency", currency);
-    formData.append("duration", duration); // 🔹 відправка тривалості
+    formData.append("duration", duration);
 
     setLoading(true);
     try {
@@ -129,9 +145,7 @@ export default function CreateSection() {
         return;
       }
 
-      setNotification(
-        "Product created successfully!"
-      );
+      setNotification("Product created successfully!");
 
       handleRemoveImage();
       setTitle("");
@@ -140,6 +154,7 @@ export default function CreateSection() {
       setCurrency("");
       setDuration("");
       setCommission(null);
+      setFinalPrice(null);
 
       fetchProducts();
     } catch (err) {
@@ -207,6 +222,7 @@ export default function CreateSection() {
             required
           />
         </div>
+
         <div className="input-wrapper">
           <select
             value={duration}
@@ -223,7 +239,7 @@ export default function CreateSection() {
           </select>
         </div>
 
-        {/* 🔹 Ціна та валюта */}
+        {/* 🔹 Price */}
         <div className="price-row">
           <input
             value={price}
@@ -243,10 +259,17 @@ export default function CreateSection() {
           </select>
         </div>
 
-        {/* 🔹 Показ комісії */}
+        {/* 🔹 Commission */}
         {currency === "SOL" && commission !== null && (
           <p style={{ color: "#00ffff", fontWeight: "bold" }}>
             Commission: {commission} SOL
+          </p>
+        )}
+
+        {/* 🔹 Final price */}
+        {currency === "SOL" && finalPrice !== null && (
+          <p style={{ color: "#00ff88", fontWeight: "bold" }}>
+            You will receive: {finalPrice} SOL
           </p>
         )}
 

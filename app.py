@@ -201,10 +201,10 @@ def create_product():
     description = request.form.get("description")
     price = request.form.get("price")
     currency = request.form.get("currency")
-    duration_value = request.form.get("duration")  # 🔹 нове поле для тривалості
+    duration_value = request.form.get("duration")
     created_at = datetime.utcnow()
 
-    # перевірки
+    # ---------- ВАЛІДАЦІЇ ----------
     if not all([image, title, description, price, currency, duration_value]):
         return jsonify({"error": "all fields required"}), 400
 
@@ -237,10 +237,16 @@ def create_product():
         logging.exception(f"/create_product -> S3 upload failed: {e}")
         return jsonify({"error": "failed to upload image"}), 500
 
-    # ---------- Розрахунок комісії ----------
+    # ---------- РОЗРАХУНОК КОМІСІЇ ----------
     commission = calculate_sol_commission(price)
 
-    # ---------- Розрахунок expires_at ----------
+    # ---------- РОЗРАХУНОК ОСТАННЬОЇ СУМИ (NET) ----------
+    final_price = round(price - commission, 9)
+
+    if final_price <= 0:
+        return jsonify({"error": "final price must be greater than 0"}), 400
+
+    # ---------- РОЗРАХУНОК expires_at ----------
     duration_map = {
         "2m": timedelta(minutes=2),
         "6h": timedelta(hours=6),
@@ -254,29 +260,36 @@ def create_product():
 
     expires_at = created_at + duration_map[duration_value]
 
-    # ---------- Додавання продукту в базу ----------
+    # ---------- ЗАПИС У БАЗУ ----------
     products.insert_one({
-    "wallet": wallet,
-    "title": title,
-    "description": description,
-    "price": price,
-    "currency": currency,
-    "commission": commission,
-    "stats": {"status": "new", "count": 0},
-    "image": image_url,        # URL для фронту
-    "s3_key": file_key,        # ✅ ДЛЯ ВИДАЛЕННЯ
-    "created_at": created_at,
-    "expires_at": expires_at
-})
-
+        "wallet": wallet,
+        "title": title,
+        "description": description,
+        "price": price,                 # ціна для покупця
+        "commission": commission,        # комісія платформи
+        "final_price": final_price,      # ✅ сума після комісії (seller net)
+        "currency": currency,
+        "stats": {
+            "status": "new",
+            "count": 0
+        },
+        "image": image_url,
+        "s3_key": file_key,
+        "created_at": created_at,
+        "expires_at": expires_at
+    })
 
     return jsonify({
         "status": "ok",
-        "s3_key": file_key,
         "image": image_url,
+        "s3_key": file_key,
+        "price": price,
         "commission": commission,
+        "final_price": final_price,      # ✅ віддаємо фронту
+        "currency": currency,
         "expires_at": expires_at.isoformat()
     })
+
 
 # ---------- Роут для обчислення комісії на Sol ----------
 @app.route("/calculate_commission_sol", methods=["GET"])
@@ -284,6 +297,7 @@ def calculate_commission_sol():
     price = request.args.get("price")
     if not price:
         return jsonify({"error": "price required"}), 400
+
     try:
         price = float(price)
     except ValueError:
@@ -292,10 +306,22 @@ def calculate_commission_sol():
     if price < 0.001 or price > 9_999_999:
         return jsonify({"error": "price out of range (0.001 - 9,999,999)"}), 400
 
+    # 🔹 Рахуємо комісію
     commission = calculate_sol_commission(price)
-    commission = round(commission, 4)
 
-    return jsonify({"price": price, "commission": commission})
+    # 🔹 Остання сума (ціна - комісія)
+    final_price = price - commission
+
+    # 🔹 Округлення
+    commission = round(commission, 4)
+    final_price = round(final_price, 4)
+
+    return jsonify({
+        "price": price,
+        "commission": commission,
+        "final_price": final_price
+    })
+
 
 @app.route("/products", methods=["GET"])
 def get_products():
@@ -326,6 +352,8 @@ def get_products():
             "image": item.get("image"),
             "created_at": created_at_str,
             "expires_at": item.get("expires_at"),
+            "commission": item.get("commission"),
+            "final_price": item.get("final_price"),
 
             # 👇 додали stats
             "stats": {

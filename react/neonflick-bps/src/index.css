@@ -1066,7 +1066,7 @@ body {
 /* 💳 Окреме вікно для description */
 .payment-card--description {
   width: 380px;
-  height: 521.91px;
+  height: 595.67px;
   background: rgba(0, 30, 30, 0.55);
   backdrop-filter: blur(14px);
   border-radius: 18px;
@@ -1156,10 +1156,6 @@ body {
   color: #00ffff;
 }
 
-.additional-info-box strong {
-  color: #ffffff;
-}
-
 .arrow {
   transition: transform 0.3s;
 }
@@ -1237,4 +1233,14 @@ body {
 
 .payment-card__timer {
   margin-top: 15px;
+}
+
+.final_price {
+  color: lime;
+  font-weight: bold;
+}
+
+.commission {
+  color: #00ffff;
+  font-weight: bold;
 }

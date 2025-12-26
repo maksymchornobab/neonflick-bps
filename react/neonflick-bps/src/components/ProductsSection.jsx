@@ -94,8 +94,8 @@ export default function ProductsSection({ onEdit }) {
       if (sortBy === "price") {
         return sortOrder === "asc" ? a.price - b.price : b.price - a.price;
       } else {
-        const dateA = new Date(a.created_at),
-          dateB = new Date(b.created_at);
+        const dateA = new Date(a.created_at);
+        const dateB = new Date(b.created_at);
         return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
       }
     });
@@ -140,7 +140,9 @@ export default function ProductsSection({ onEdit }) {
           {chooseMode && (
             <>
               <button onClick={toggleSelectAll}>
-                {selectedProducts.length === products.length ? "Unselect All" : "Choose All"}
+                {selectedProducts.length === products.length
+                  ? "Unselect All"
+                  : "Choose All"}
               </button>
               <button
                 onClick={() => handleDelete(selectedProducts)}
@@ -224,7 +226,11 @@ export default function ProductsSection({ onEdit }) {
                 onClick={() => toggleInfo(product.id)}
               >
                 Additional Information
-                <span className={`info-arrow ${openInfoId === product.id ? "open" : ""}`}>
+                <span
+                  className={`info-arrow ${
+                    openInfoId === product.id ? "open" : ""
+                  }`}
+                >
                   ▾
                 </span>
               </div>
@@ -235,6 +241,21 @@ export default function ProductsSection({ onEdit }) {
                     <span>Status</span>
                     <strong>{product.stats?.status || "—"}</strong>
                   </div>
+
+                  <div>
+                    <span>Commission</span>
+                    <strong className="commission">
+                      {product.commission ?? "—"} {product.currency}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Final Reward</span>
+                    <strong className="final_price">
+                      {product.final_price ?? "—"} {product.currency}
+                    </strong>
+                  </div>
+
                   <div>
                     <span>Completed Transactions</span>
                     <strong>{product.stats?.count ?? 0}</strong>

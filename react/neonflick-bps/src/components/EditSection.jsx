@@ -13,7 +13,9 @@ export default function EditSection({ product, onCancel }) {
   const [description, setDescription] = useState(product.description);
   const [price, setPrice] = useState(String(product.price));
   const [currency, setCurrency] = useState(product.currency);
-  const [commission, setCommission] = useState(product.commission || null);
+
+  const [commission, setCommission] = useState(null);
+  const [finalPrice, setFinalPrice] = useState(null); // ✅
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState("");
 
@@ -26,12 +28,13 @@ export default function EditSection({ product, onCancel }) {
     };
   }, [imagePreview]);
 
-  // 🔹 Розрахунок комісії у реальному часі при зміні ціни або валюти
+  // 🔹 Live калькуляція
   useEffect(() => {
     if (currency === "SOL" && price) {
       calculateCommission(price);
     } else {
       setCommission(null);
+      setFinalPrice(null);
     }
   }, [price, currency]);
 
@@ -41,14 +44,18 @@ export default function EditSection({ product, onCancel }) {
         `http://127.0.0.1:5000/calculate_commission_sol?price=${priceValue}`
       );
       const data = await res.json();
+
       if (res.ok) {
         setCommission(data.commission);
+        setFinalPrice(data.final_price); // ✅
       } else {
         setCommission(null);
+        setFinalPrice(null);
       }
     } catch (err) {
       console.error(err);
       setCommission(null);
+      setFinalPrice(null);
     }
   };
 
@@ -71,8 +78,10 @@ export default function EditSection({ product, onCancel }) {
     let value = e.target.value;
     if (!/^[0-9.]*$/.test(value)) return;
     if ((value.match(/\./g) || []).length > 1) return;
+
     const [int = "", dec = ""] = value.split(".");
     if (int.length > 7 || dec.length > 3) return;
+
     setPrice(value);
   };
 
@@ -187,9 +196,17 @@ export default function EditSection({ product, onCancel }) {
           </select>
         </div>
 
+        {/* 🔹 Commission */}
         {currency === "SOL" && commission !== null && (
           <p style={{ color: "#00ffff", fontWeight: "bold" }}>
             Commission: {commission} SOL
+          </p>
+        )}
+
+        {/* 🔹 Final price */}
+        {currency === "SOL" && finalPrice !== null && (
+          <p style={{ color: "#00ff88", fontWeight: "bold" }}>
+            You will receive: {finalPrice} SOL
           </p>
         )}
 

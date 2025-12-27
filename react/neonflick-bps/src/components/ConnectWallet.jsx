@@ -1,90 +1,84 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { ethers } from "ethers";
+import { Connection } from "@solana/web3.js";
 import { useWalletAuth } from "./WalletAuthContext";
-import { Connection, clusterApiUrl } from "@solana/web3.js";
-import Notification from "./Notification"; // 🔹 імпорт Notification
+import Notification from "./Notification";
 
-export default function ConnectWallet({ onConnect }) { // 🔹 додано onConnect
+export default function ConnectWallet({ onConnect }) {
   const { loginWithWallet } = useWalletAuth();
+
   const [connecting, setConnecting] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [availableWallets, setAvailableWallets] = useState([]);
-  const [notification, setNotification] = useState(""); // 🔹 стан сповіщення
+  const [notification, setNotification] = useState("");
 
-  // 🔹 Detect wallets ONLY (no connection here)
+  const RPC_URL = process.env.REACT_APP_SOLANA_RPC; // mainnet RPC від Helius
+
+  // 🔍 Detect ONLY Phantom (Solana)
   const detectWallets = () => {
-    const wallets = [];
-
-    if (window.ethereum) wallets.push({ type: "EVM", name: "MetaMask" });
-    if (window.solana?.isPhantom) wallets.push({ type: "SOL", name: "Phantom" });
-
-    setAvailableWallets(wallets);
+    if (!window.solana?.isPhantom) {
+      setNotification("Phantom wallet not found");
+      return;
+    }
     setShowModal(true);
   };
 
-  // 🔹 Connect selected wallet
-  const connectSelectedWallet = async (wallet) => {
+  // 🔐 Connect Phantom (SOL only)
+  const connectPhantom = async () => {
+    const provider = window.solana;
+
     try {
       setConnecting(true);
-      let walletAddress = "";
 
-      if (wallet.type === "EVM") {
-        await window.ethereum.request({ method: "eth_requestAccounts" });
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
-        walletAddress = await signer.getAddress();
+      if (!provider?.isPhantom) {
+        setNotification("Phantom wallet not found");
+        return;
       }
 
-      if (wallet.type === "SOL") {
-        try { await window.solana.disconnect(); } catch {}
-        const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
-        const res = await window.solana.connect({ onlyIfTrusted: false });
-        walletAddress = res.publicKey.toString();
-      }
+      // 🔹 Connect
+      const res = await provider.connect({ onlyIfTrusted: false });
+      const walletAddress = res.publicKey.toString();
 
+      // 🔹 Check network via RPC
+      const connection = new Connection(RPC_URL, "confirmed");
+      const version = await connection.getVersion();
+      console.log("Connected RPC version:", version);
+      console.log("Wallet address:", walletAddress);
+
+      // 🔐 Login
       await loginWithWallet(walletAddress);
-
-      // 🔹 виклик callback після успішного підключення
       if (onConnect) onConnect(walletAddress);
 
-      setNotification(`Wallet connected: ${walletAddress}`); // 🔹 Notification
+      setNotification(`Wallet connected: ${walletAddress}`);
       setShowModal(false);
     } catch (err) {
-      console.error(err);
-      setNotification("Failed to connect wallet"); // 🔹 Notification
+      console.error("Phantom connection failed:", err);
+      setNotification("Failed to connect Phantom wallet");
     } finally {
       setConnecting(false);
     }
   };
 
-  // 🔹 Modal via portal
+  // 🪟 Modal
   const modal = showModal
     ? createPortal(
         <div className="wallet-modal-overlay">
           <div className="wallet-modal">
-            <h2 className="wallet-modal__title">Select Wallet</h2>
+            <h2 className="wallet-modal__title">Connect Wallet</h2>
 
             <div className="wallet-modal__list">
-              {availableWallets.length === 0 && (
-                <p className="wallet-modal__empty">No wallets detected</p>
-              )}
-
-              {availableWallets.map((wallet, idx) => (
-                <button
-                  key={idx}
-                  className="wallet-modal__item"
-                  onClick={() => connectSelectedWallet(wallet)}
-                  disabled={connecting}
-                >
-                  {wallet.name}
-                </button>
-              ))}
+              <button
+                className="wallet-modal__item"
+                onClick={connectPhantom}
+                disabled={connecting}
+              >
+                Phantom (Solana)
+              </button>
             </div>
 
             <button
               className="wallet-modal__cancel"
               onClick={() => setShowModal(false)}
+              disabled={connecting}
             >
               Cancel
             </button>
@@ -106,9 +100,11 @@ export default function ConnectWallet({ onConnect }) { // 🔹 додано onCo
 
       {modal}
 
-      {/* 🔹 Notification */}
       {notification && (
-        <Notification message={notification} onClose={() => setNotification("")} />
+        <Notification
+          message={notification}
+          onClose={() => setNotification("")}
+        />
       )}
     </>
   );

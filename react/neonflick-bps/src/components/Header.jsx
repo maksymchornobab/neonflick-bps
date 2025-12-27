@@ -13,7 +13,7 @@ export default function Header({ activeSection, setActiveSection }) {
   const [showChangeWalletModal, setShowChangeWalletModal] = useState(false);
   const timerRef = useRef(null);
 
-  // Показ кнопок при hover
+  // 🔹 Показ кнопок при hover
   const handleMouseOver = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
     setShowActions(true);
@@ -30,20 +30,16 @@ export default function Header({ activeSection, setActiveSection }) {
     timerRef.current = setTimeout(() => setShowActions(false), 6000);
   };
 
-  // Logout
+  // 🔐 Logout (SOL only)
   const handleLogout = async () => {
     try {
-      if (window.solana?.isPhantom) { try { await window.solana.disconnect(); } catch {} }
-    } catch (err) {
-      console.error("Failed to disconnect Phantom:", err);
-    }
-
-    try {
-      if (window.ethereum?.isMetaMask || window.ethereum?.isCoinbaseWallet) {
-        try { await window.ethereum.request({ method: "eth_requestAccounts" }); } catch {}
+      if (window.solana?.isPhantom) {
+        try {
+          await window.solana.disconnect();
+        } catch {}
       }
     } catch (err) {
-      console.error("Failed to handle Ethereum disconnect:", err);
+      console.error("Failed to disconnect Phantom:", err);
     } finally {
       logout();
     }
@@ -60,13 +56,17 @@ export default function Header({ activeSection, setActiveSection }) {
         <nav className="nav flex items-center gap-8">
           <button
             onClick={() => setActiveSection("products")}
-            className={`nav-btn ${activeSection === "products" ? "nav-active" : ""}`}
+            className={`nav-btn ${
+              activeSection === "products" ? "nav-active" : ""
+            }`}
           >
             Products
           </button>
           <button
             onClick={() => setActiveSection("create")}
-            className={`nav-btn ${activeSection === "create" ? "nav-active" : ""}`}
+            className={`nav-btn ${
+              activeSection === "create" ? "nav-active" : ""
+            }`}
           >
             Create
           </button>
@@ -82,7 +82,9 @@ export default function Header({ activeSection, setActiveSection }) {
           onMouseOver={handleMouseOver}
           onMouseOut={handleMouseOut}
         >
-          <div className="wallet-chip">{shortenAddress(user.wallet)}</div>
+          <div className="wallet-chip">
+            {shortenAddress(user.wallet)}
+          </div>
 
           {showActions && (
             <div className="wallet-action-container">
@@ -102,7 +104,9 @@ export default function Header({ activeSection, setActiveSection }) {
           )}
 
           {showChangeWalletModal && (
-            <ChangeWalletModal onClose={() => setShowChangeWalletModal(false)} />
+            <ChangeWalletModal
+              onClose={() => setShowChangeWalletModal(false)}
+            />
           )}
         </div>
       )}

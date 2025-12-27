@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 export default function SuccessModal({ txHash, product, buyerWallet }) {
-  const solscanUrl = `https://solscan.io/tx/${txHash}?cluster=devnet`;
+  const solscanUrl = `https://solscan.io/tx/${txHash}?cluster=mainnet`;
   const { publicKey } = useWallet();
 
   const [confirmClose, setConfirmClose] = useState(false);

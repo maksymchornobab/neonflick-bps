@@ -53,11 +53,12 @@ function PaymentPage() {
   const [paying, setPaying] = useState(false);
   const [txHash, setTxHash] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
-
+  const RPC_URL = process.env.REACT_APP_SOLANA_RPC;
+  
   const connection = useMemo(
-    () => new Connection("https://api.devnet.solana.com"),
-    []
-  );
+  () => new Connection(RPC_URL, "confirmed"),
+  []
+);
 
   // 🔹 Fetch product
   useEffect(() => {
@@ -117,26 +118,35 @@ function PaymentPage() {
 
       if (!res.ok) throw new Error(await res.text());
       const { blockhash, transfers } = await res.json();
+      // 🔹 Створюємо транзакцію
+const tx = new Transaction({ recentBlockhash: blockhash, feePayer: publicKey });
 
-      const tx = new Transaction({ recentBlockhash: blockhash, feePayer: publicKey });
+// 🔹 Сумуємо всі lamports для логування
+let totalLamports = 0;
 
-      transfers.forEach(t => {
-        if (t.to && t.lamports > 0) {
-          tx.add(
-            SystemProgram.transfer({
-              fromPubkey: publicKey,
-              toPubkey: new PublicKey(t.to),
-              lamports: t.lamports,
-            })
-          );
-        }
-      });
+transfers.forEach(t => {
+  if (t.to && t.lamports > 0) {
+    totalLamports += t.lamports;
+    tx.add(
+      SystemProgram.transfer({
+        fromPubkey: publicKey,
+        toPubkey: new PublicKey(t.to),
+        lamports: t.lamports,
+      })
+    );
+  }
+});
 
-      setNotification("Waiting for wallet confirmation…");
+// 🔹 Лог балансу гаманця
+const walletBalance = await connection.getBalance(publicKey);
 
-      const signedTx = await signTransaction(tx);
-      const signature = await connection.sendRawTransaction(signedTx.serialize());
-      await connection.confirmTransaction(signature);
+// 🔹 Очікуємо підтвердження від користувача
+setNotification("Waiting for wallet confirmation…");
+
+const signedTx = await signTransaction(tx);
+const signature = await connection.sendRawTransaction(signedTx.serialize());
+await connection.confirmTransaction(signature);
+
 
       // ✅ Update product on backend
       await fetch(`http://127.0.0.1:5000/api/products/${product._id}/transaction`, {

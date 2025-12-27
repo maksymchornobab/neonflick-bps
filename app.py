@@ -49,9 +49,7 @@ s3 = boto3.client(
 )
 
 PLATFORM_WALLET_SOL = os.getenv("PLATFORM_WALLET_ADDRESS_SOL")
-HELIUS_API_KEY = os.getenv("HELIUS_API_KEY")
 SOLANA_NETWORK = os.getenv("SOLANA_NETWORK")
-HELIUS_RPC_URL = f"{SOLANA_NETWORK}?api-key={HELIUS_API_KEY}"
 
 # ---------------- HELPERS ----------------
 def decode_token():
@@ -754,7 +752,6 @@ def generate_receipt():
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     add_row("Date:", now_str)
     add_row("Product Name:", data.get("title"))
-    add_row("Description:", data.get("description", ""))
     add_row("Price:", f"{data.get('price')} {data.get('currency')}")
     add_row("Buyer Wallet Address:", data.get("buyer_wallet"))
     add_row("Seller Wallet Address:", data.get("sellerWallet"))

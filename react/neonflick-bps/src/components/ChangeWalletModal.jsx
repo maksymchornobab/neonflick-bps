@@ -1,45 +1,48 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { ethers } from "ethers";
+import { Connection } from "@solana/web3.js";
 import { useWalletAuth } from "./WalletAuthContext";
-import { Connection, clusterApiUrl } from "@solana/web3.js";
 
 export default function ChangeWalletModal({ onClose }) {
   const { loginWithWallet } = useWalletAuth();
-  const [connecting, setConnecting] = useState(false);
-  const [availableWallets, setAvailableWallets] = useState([]);
 
-  // Detect wallets
+  const [connecting, setConnecting] = useState(false);
+  const [phantomAvailable, setPhantomAvailable] = useState(false);
+
+  const RPC_URL = process.env.REACT_APP_SOLANA_RPC; // mainnet RPC від Helius
+
+  // 🔍 Detect Phantom ONLY
   useEffect(() => {
-    const wallets = [];
-    if (window.ethereum) wallets.push({ type: "EVM", name: "MetaMask" });
-    if (window.solana?.isPhantom) wallets.push({ type: "SOL", name: "Phantom" });
-    setAvailableWallets(wallets);
+    setPhantomAvailable(!!window.solana?.isPhantom);
   }, []);
 
-  const connectSelectedWallet = async (wallet) => {
+  const connectPhantom = async () => {
+    const provider = window.solana;
+
     try {
       setConnecting(true);
-      let walletAddress = "";
 
-      if (wallet.type === "EVM") {
-        await window.ethereum.request({ method: "eth_requestAccounts" });
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
-        walletAddress = await signer.getAddress();
+      if (!provider?.isPhantom) {
+        alert("Phantom wallet not found");
+        return;
       }
 
-      if (wallet.type === "SOL") {
-        try { await window.solana.disconnect(); } catch {}
-        const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
-        const res = await window.solana.connect({ onlyIfTrusted: false });
-        walletAddress = res.publicKey.toString();
-      }
+      // 🔹 Connect wallet
+      const res = await provider.connect({ onlyIfTrusted: false });
+      const walletAddress = res.publicKey.toString();
 
+      // 🔹 Check network via RPC
+      const connection = new Connection(RPC_URL, "confirmed");
+      const version = await connection.getVersion();
+      console.log("Connected RPC version:", version);
+      console.log("Wallet address:", walletAddress);
+
+      // 🔐 Login via explicit change
       await loginWithWallet(walletAddress);
       onClose();
     } catch (err) {
       console.error("Failed to change wallet:", err);
+      alert("Failed to connect Phantom wallet");
       onClose();
     } finally {
       setConnecting(false);
@@ -49,26 +52,29 @@ export default function ChangeWalletModal({ onClose }) {
   return createPortal(
     <div className="wallet-modal-overlay">
       <div className="wallet-modal">
-        <h2 className="wallet-modal__title">Select Wallet</h2>
+        <h2 className="wallet-modal__title">Change Wallet</h2>
 
         <div className="wallet-modal__list">
-          {availableWallets.length === 0 && (
-            <p className="wallet-modal__empty">No wallets detected</p>
+          {!phantomAvailable && (
+            <p className="wallet-modal__empty">Phantom wallet not detected</p>
           )}
 
-          {availableWallets.map((wallet, idx) => (
+          {phantomAvailable && (
             <button
-              key={idx}
               className="wallet-modal__item"
-              onClick={() => connectSelectedWallet(wallet)}
+              onClick={connectPhantom}
               disabled={connecting}
             >
-              {wallet.name}
+              Phantom (Solana)
             </button>
-          ))}
+          )}
         </div>
 
-        <button className="wallet-modal__cancel" onClick={onClose}>
+        <button
+          className="wallet-modal__cancel"
+          onClick={onClose}
+          disabled={connecting}
+        >
           Cancel
         </button>
       </div>

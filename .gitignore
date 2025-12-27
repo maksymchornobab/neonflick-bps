@@ -24,5 +24,4 @@ yarn-error.log*
 .venv
 .env
 info.txt
-secrets
 /react/neonflick-bps/node_modules

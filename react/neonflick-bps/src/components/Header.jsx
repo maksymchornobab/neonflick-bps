@@ -13,6 +13,7 @@ export default function Header({ activeSection, setActiveSection }) {
   const [showChangeWalletModal, setShowChangeWalletModal] = useState(false);
   const timerRef = useRef(null);
 
+  // Показ кнопок при hover
   const handleMouseOver = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
     setShowActions(true);
@@ -29,14 +30,20 @@ export default function Header({ activeSection, setActiveSection }) {
     timerRef.current = setTimeout(() => setShowActions(false), 6000);
   };
 
+  // Logout
   const handleLogout = async () => {
     try {
       if (window.solana?.isPhantom) { try { await window.solana.disconnect(); } catch {} }
+    } catch (err) {
+      console.error("Failed to disconnect Phantom:", err);
+    }
+
+    try {
       if (window.ethereum?.isMetaMask || window.ethereum?.isCoinbaseWallet) {
         try { await window.ethereum.request({ method: "eth_requestAccounts" }); } catch {}
       }
     } catch (err) {
-      console.error("Failed to disconnect wallet:", err);
+      console.error("Failed to handle Ethereum disconnect:", err);
     } finally {
       logout();
     }
@@ -80,19 +87,18 @@ export default function Header({ activeSection, setActiveSection }) {
           {showActions && (
             <div className="wallet-action-container">
               <button
-    onClick={() => setShowChangeWalletModal(true)}
-    className="wallet-action-btn change-wallet"
-  >
-    Change Wallet
-  </button>
-  <button
-    onClick={handleLogout}
-    className="wallet-action-btn disconnect"
-  >
-    Disconnect
-  </button>
-</div>
-
+                onClick={() => setShowChangeWalletModal(true)}
+                className="wallet-action-btn change-wallet"
+              >
+                Change Wallet
+              </button>
+              <button
+                onClick={handleLogout}
+                className="wallet-action-btn disconnect"
+              >
+                Disconnect
+              </button>
+            </div>
           )}
 
           {showChangeWalletModal && (

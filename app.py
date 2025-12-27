@@ -48,7 +48,7 @@ s3 = boto3.client(
     region_name=AWS_REGION,
 )
 
-PLATFORM_WALLET = os.getenv("PLATFORM_WALLET_ADDRESS")
+PLATFORM_WALLET_SOL = os.getenv("PLATFORM_WALLET_ADDRESS_SOL")
 HELIUS_API_KEY = os.getenv("HELIUS_API_KEY")
 SOLANA_NETWORK = os.getenv("SOLANA_NETWORK")
 HELIUS_RPC_URL = f"{SOLANA_NETWORK}?api-key={HELIUS_API_KEY}"
@@ -247,7 +247,7 @@ def create_product():
 
     # ---------- РОЗРАХУНОК expires_at ----------
     duration_map = {
-        "2m": timedelta(minutes=2),
+        "3h": timedelta(hours=3),
         "6h": timedelta(hours=6),
         "12h": timedelta(hours=12),
         "1d": timedelta(days=1),
@@ -324,7 +324,18 @@ def calculate_commission_sol():
 
 @app.route("/products", methods=["GET"])
 def get_products():
-    items = products.find().sort("created_at", -1)
+    payload = decode_token()
+    if not payload:
+        return jsonify({"products": []}), 200
+
+    wallet = payload.get("wallet")
+    if not wallet:
+        return jsonify({"products": []}), 200
+
+    items = products.find(
+        {"wallet": wallet}
+    ).sort("created_at", -1)
+
     result = []
 
     for item in items:
@@ -354,16 +365,15 @@ def get_products():
             "expires_at": item.get("expires_at"),
             "commission": item.get("commission"),
             "final_price": item.get("final_price"),
-
-            # 👇 додали stats з транзакціями
             "stats": {
                 "status": stats.get("status"),
                 "count": stats.get("count", 0),
-                "transactions": stats.get("transactions", [])  # повертаємо список хешів
+                "transactions": stats.get("transactions", [])
             }
         })
 
     return jsonify({"products": result})
+
 
 
 @app.route("/delete-product", methods=["POST"])
@@ -594,7 +604,7 @@ def prepare_sol_transaction():
     LAMPORTS = 1_000_000_000
     buyer = PublicKey(buyer_wallet)
     seller = PublicKey(product["wallet"])
-    platform = PublicKey(PLATFORM_WALLET)
+    platform = PublicKey(PLATFORM_WALLET_SOL)
 
     client = Client(os.getenv("SOLANA_NETWORK"))
     try:

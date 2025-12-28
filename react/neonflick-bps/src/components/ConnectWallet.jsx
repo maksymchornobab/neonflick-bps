@@ -41,8 +41,6 @@ export default function ConnectWallet({ onConnect }) {
       // 🔹 Check network via RPC
       const connection = new Connection(RPC_URL, "confirmed");
       const version = await connection.getVersion();
-      console.log("Connected RPC version:", version);
-      console.log("Wallet address:", walletAddress);
 
       // 🔐 Login
       await loginWithWallet(walletAddress);
@@ -51,7 +49,6 @@ export default function ConnectWallet({ onConnect }) {
       setNotification(`Wallet connected: ${walletAddress}`);
       setShowModal(false);
     } catch (err) {
-      console.error("Phantom connection failed:", err);
       setNotification("Failed to connect Phantom wallet");
     } finally {
       setConnecting(false);

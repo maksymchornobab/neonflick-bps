@@ -143,20 +143,52 @@ def root():
 def auth_wallet():
     data = request.json
     wallet = data.get("wallet")
+    consent = data.get("consent", False)  # нове поле, bool
 
     if not wallet or not isinstance(wallet, str):
         return jsonify({"error": "wallet must be string"}), 400
+    if not isinstance(consent, bool):
+        return jsonify({"error": "consent must be boolean"}), 400
 
     user = users.find_one({"wallet": wallet})
+    now = datetime.utcnow()
+
+    # Список згод користувача
+    consents = []
+
+    # Якщо користувач новий, автоматично погоджуємо cookies
     if not user:
-        users.insert_one({"wallet": wallet, "created_at": datetime.utcnow(), "last_login": datetime.utcnow()})
+        if consent:
+            consents.append("crypto_risk_disclosure")
+        consents.append("cookies")  # автоматична згода на cookies
+
+        users.insert_one({
+            "wallet": wallet,
+            "created_at": now,
+            "last_login": now,
+            "consents": consents,
+            "consent_given_at": {c: now for c in consents}  # відзначаємо час кожної згоди
+        })
         status = "created"
     else:
-        users.update_one({"wallet": wallet}, {"$set": {"last_login": datetime.utcnow()}})
+        update_fields = {"last_login": now}
+        user_consents = user.get("consents", [])
+
+        if consent and "crypto_risk_disclosure" not in user_consents:
+            user_consents.append("crypto_risk_disclosure")
+            update_fields["consents"] = user_consents
+
+            # Додаємо timestamp для нової згоди
+            consent_times = user.get("consent_given_at", {})
+            consent_times["crypto_risk_disclosure"] = now
+            update_fields["consent_given_at"] = consent_times
+
+        users.update_one({"wallet": wallet}, {"$set": update_fields})
         status = "login"
 
+    # Генеруємо JWT
     token = jwt.encode(
-        {"wallet": wallet, "exp": datetime.utcnow() + timedelta(days=7)},
+        {"wallet": wallet, "exp": now + timedelta(days=7)},
         app.config["SECRET_KEY"],
         algorithm="HS256"
     )
@@ -164,6 +196,8 @@ def auth_wallet():
         token = token.decode("utf-8")
 
     return jsonify({"status": status, "user": {"wallet": wallet}, "token": token})
+
+
 
 
 @app.route("/auth/me", methods=["GET"])
@@ -179,8 +213,41 @@ def auth_me():
     if not user:
         return jsonify({"user": None}), 200
 
-    return jsonify({"user": {"wallet": wallet}})
+    return jsonify({
+        "user": {
+            "wallet": wallet,
+            "consents": user.get("consents", []),
+            "consent_given_at": user.get("consent_given_at", {})
+        }
+    })
 
+
+@app.route("/auth/consent", methods=["POST"])
+def add_consent():
+    data = request.json
+    wallet = data.get("wallet")
+    consent = data.get("consent")  # строка, наприклад "terms"
+
+    if not wallet or not isinstance(wallet, str):
+        return jsonify({"error": "wallet must be string"}), 400
+    if not consent or not isinstance(consent, str):
+        return jsonify({"error": "consent must be string"}), 400
+
+    user = users.find_one({"wallet": wallet})
+    now = datetime.utcnow()
+
+    if not user:
+        return jsonify({"error": "user not found"}), 404
+
+    consents = user.get("consents", [])
+    consent_given_at = user.get("consent_given_at", {})
+
+    if consent not in consents:
+        consents.append(consent)
+        consent_given_at[consent] = now
+        users.update_one({"wallet": wallet}, {"$set": {"consents": consents, "consent_given_at": consent_given_at}})
+
+    return jsonify({"status": "ok", "consents": consents})
 
 
 # ---------- Роут створення продукту ----------

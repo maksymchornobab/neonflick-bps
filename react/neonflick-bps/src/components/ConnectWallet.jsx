@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Connection } from "@solana/web3.js";
 import { useWalletAuth } from "./WalletAuthContext";
 import Notification from "./Notification";
+import TermsConsentModal from "./TermsConsentModal";
 
 export default function ConnectWallet({ onConnect }) {
   const { loginWithWallet } = useWalletAuth();
@@ -10,31 +10,19 @@ export default function ConnectWallet({ onConnect }) {
   const [connecting, setConnecting] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [agreed, setAgreed] = useState(false);
+
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [forceBlock, setForceBlock] = useState(false);
+
   const [notification, setNotification] = useState("");
 
-  const RPC_URL = process.env.REACT_APP_SOLANA_RPC;
+  // 🔑 локальна pending-сесія ДО прийняття Terms
+  const [sessionWallet, setSessionWallet] = useState(null);
+  const [sessionToken, setSessionToken] = useState(null);
 
   useEffect(() => {
-    // 🔹 Перевірка згоди з localStorage
     const savedConsent = localStorage.getItem("cryptoRiskConsent");
     setAgreed(savedConsent === "true");
-
-    // 🔹 Перехоплення події connect з Phantom
-    const provider = window.solana;
-    if (provider?.isPhantom) {
-      provider.on("connect", (publicKey) => {
-        if (!localStorage.getItem("cryptoRiskConsent")) {
-          setNotification(
-            "You must agree to Crypto Risk Disclosure before connecting your wallet"
-          );
-          provider.disconnect();
-        }
-      });
-    }
-
-    return () => {
-      if (provider?.isPhantom) provider.removeAllListeners("connect");
-    };
   }, []);
 
   const detectWallets = () => {
@@ -50,13 +38,6 @@ export default function ConnectWallet({ onConnect }) {
   };
 
   const connectPhantom = async () => {
-    if (!agreed) {
-      setNotification(
-        "You must agree to Crypto Risk Disclosure before connecting your wallet"
-      );
-      return;
-    }
-
     const provider = window.solana;
     if (!provider?.isPhantom) {
       setNotification("Phantom wallet not detected");
@@ -67,20 +48,55 @@ export default function ConnectWallet({ onConnect }) {
       setConnecting(true);
       setNotification("Connecting to Phantom…");
 
-      const res = await provider.connect({ onlyIfTrusted: false });
-      if (!res?.publicKey) throw new Error("No publicKey returned from Phantom");
+      // 1️⃣ Phantom connect
+      const res = await provider.connect();
+      if (!res?.publicKey) throw new Error("No publicKey returned");
 
       const walletAddress = res.publicKey.toString();
-      const connection = new Connection(RPC_URL, "confirmed");
 
+      // 2️⃣ Backend auth
+      const loginRes = await fetch("http://127.0.0.1:5000/auth/wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wallet: walletAddress,
+          consent: true,
+        }),
+      });
+
+      const loginData = await loginRes.json();
+      if (!loginData?.token) throw new Error("Auth failed");
+
+      // 3️⃣ pending session (ВАЖЛИВО)
+      setSessionWallet(walletAddress);
+      setSessionToken(loginData.token);
+
+      localStorage.setItem("jwt_token", loginData.token);
+      localStorage.setItem("cryptoRiskConsent", "true");
+
+      setShowModal(false);
+
+      // 4️⃣ Перевірка Terms
+      const meRes = await fetch("http://127.0.0.1:5000/auth/me", {
+        headers: {
+          Authorization: `Bearer ${loginData.token}`,
+        },
+      });
+
+      const meData = await meRes.json();
+      const hasTerms = meData?.user?.consents?.includes("terms");
+
+      if (!hasTerms) {
+        setShowTermsModal(true);
+        return; // ⛔️ стоп — чекаємо згоди
+      }
+
+      // ✅ якщо Terms вже прийняті
       await loginWithWallet(walletAddress);
       if (onConnect) onConnect(walletAddress);
-
-      setNotification(`Wallet connected: ${walletAddress}`);
-      setShowModal(false);
     } catch (err) {
-      console.error("❌ Phantom connection error full:", err);
-      setNotification(`Failed to connect Phantom wallet: ${err?.message || err}`);
+      console.error(err);
+      setNotification(err.message || "Failed to connect wallet");
     } finally {
       setConnecting(false);
     }
@@ -108,9 +124,9 @@ export default function ConnectWallet({ onConnect }) {
               </button>
             </div>
 
-            <p className="risks-agree">To connect your wallet, you have to agree to 
-               <strong style={{ fontWeight: "bold", color: "#00ffff", marginLeft: "3px" }}>Crypto Risk 
-                Disclosure.</strong> 
+            <p className="risks-agree">
+              To connect your wallet, you must agree to the{" "}
+              <strong>Crypto Risk Disclosure</strong>
             </p>
 
             <div className="wallet-modal__consent">
@@ -119,7 +135,6 @@ export default function ConnectWallet({ onConnect }) {
                 id="consent"
                 checked={agreed}
                 onChange={handleConsentChange}
-                style={{ marginRight: "10px" }}
               />
               <label htmlFor="consent">
                 I agree to the{" "}
@@ -127,7 +142,6 @@ export default function ConnectWallet({ onConnect }) {
                   href="/legal/crypto-risks"
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ fontWeight: "bold", textDecoration: "underline", color: "#00ffff" }}
                 >
                   Crypto Risk Disclosure
                 </a>
@@ -158,6 +172,25 @@ export default function ConnectWallet({ onConnect }) {
       </button>
 
       {modal}
+
+      {showTermsModal && sessionWallet && sessionToken && (
+        <TermsConsentModal
+          wallet={sessionWallet}
+          token={sessionToken}
+          onAgree={async () => {
+            setShowTermsModal(false);
+            await loginWithWallet(sessionWallet);
+            if (onConnect) onConnect(sessionWallet);
+          }}
+          onReject={() => setForceBlock(true)}
+        />
+      )}
+
+      {forceBlock && (
+        <div className="force-block-overlay">
+          Sorry, we cannot provide access without agreeing to Terms.
+        </div>
+      )}
 
       {notification && (
         <Notification

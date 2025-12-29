@@ -15,6 +15,7 @@ import {
 } from "@solana/wallet-adapter-wallets";
 import Notification from "../components/Notification";
 import SuccessModal from "../components/SuccessModal";
+import Footer from "../components/Footer";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 // 🔹 Wallet formatter
@@ -170,6 +171,7 @@ await connection.confirmTransaction(signature);
   if (error) return <div className="payment-page__error">{error}</div>;
 
   return (
+   <>
     <div className="payment-page payment-page--double">
       <div className="payment-card">
         <img src={product.image} alt={product.title} className="payment-card__image" />
@@ -264,5 +266,7 @@ await connection.confirmTransaction(signature);
         />
       )}
     </div>
+    <Footer />
+    </>
   );
 }

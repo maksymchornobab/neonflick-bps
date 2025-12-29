@@ -12,6 +12,8 @@ import CookieConsentBanner from "./components/CookieConsentBanner";
 import { useWalletAuth } from "./components/WalletAuthContext";
 import LegalNotice from "./legal/LegalNotice"; 
 import PrivacyPolicy from "./legal/PrivacyPolicy";
+import TermsAndConditions from "./legal/TermsAndConditions"
+import WithdrawalInformation from "./legal/WithdrawalInformation"
 import "./index.css";
 
 export default function App() {
@@ -64,6 +66,8 @@ export default function App() {
         <Route path="/pay/:productId" element={<PaymentPage />} />
         <Route path="/legal/legal_notice" element={<LegalNotice />} />
         <Route path="/legal/privacy" element={<PrivacyPolicy />} />
+        <Route path="/legal/terms" element={<TermsAndConditions />} />WithdrawalInformation
+        <Route path="/legal/withdrawal" element={<WithdrawalInformation />} />
 
         {/* 🏠 Dashboard route */}
         <Route path="/*" element={<Dashboard />} />

@@ -24,12 +24,16 @@ export default function PrivacyPolicy() {
       <section className="legal-section">
         <h2>Blockchain Transactions</h2>
         <p>
-          All payments on this platform occur via the Solana blockchain and are irreversible. 
-          The platform does not hold funds and operates as a non-custodial technical marketplace.
+          All payments on the Neonflick-bps occur via the Solana blockchain and are irreversible. 
+          The Neonflick-bps does not hold funds and operates as a non-custodial technical marketplace.
         </p>
         <p>
           Transaction hashes (tx_hash) are recorded for verification purposes. 
           Buyer wallet addresses are used temporarily to generate electronic receipts and are not stored in our database.
+        </p>
+        <p>
+          Blockchain transaction data is publicly accessible on the Solana blockchain and is 
+          processed outside the control of the Neonflick-bps.
         </p>
       </section>
 
@@ -37,8 +41,12 @@ export default function PrivacyPolicy() {
       <section className="legal-section">
         <h2>LocalStorage Usage</h2>
         <p>
-          We use localStorage to manage user sessions and store session-related data. 
-          Consent for localStorage usage is recorded and can be withdrawn at any time.
+          We use localStorage strictly for essential technical purposes, including session management 
+          and platform functionality.
+        </p>
+        <p>
+          Where required by applicable law, user consent is obtained and may be withdrawn at any 
+          time through browser or platform settings.
         </p>
       </section>
 
@@ -51,6 +59,11 @@ export default function PrivacyPolicy() {
           <li><strong>Product information:</strong> title, description, price, commission, final price, currency, status, transaction stats, image, cloud storage path, creation and expiration dates</li>
           <li><strong>Transaction information:</strong> transaction hash (tx_hash); buyer wallet used temporarily for receipt generation (not stored)</li>
         </ul>
+        <p></p>
+        <p>
+          Processing of personal data is based on the performance of a contract and legitimate 
+          interest in operating the platform in accordance with Article 6(1)(b) and (f) GDPR.
+        </p>
       </section>
 
       {/* Data Processors */}
@@ -60,8 +73,12 @@ export default function PrivacyPolicy() {
           Your data is stored using the following external processors operating under GDPR compliance:
         </p>
         <ul>
-          <li>MongoDB — database storage (EU data residency)</li>
-          <li>AWS S3 — cloud storage for product images (EU data residency)</li>
+          <li>MongoDB — database storage infrastructure (EU region), operated 
+            under GDPR-compliant data processing agreements
+          </li>
+          <li>AWS S3 — cloud storage infrastructure (EU region), operated under 
+            GDPR-compliant data processing agreements
+          </li>
         </ul>
       </section>
 
@@ -73,6 +90,10 @@ export default function PrivacyPolicy() {
           You may also withdraw your consent at any time.
         </p>
         <p>
+          EU users also have the right to restriction of processing, data portability, and to 
+          lodge a complaint with a supervisory authority in their country of residence.
+        </p>
+        <p>
           To exercise your rights, please contact us at: <a href="mailto:neonflickplatform@gmail.com">neonflickplatform@gmail.com</a>
         </p>
       </section>
@@ -81,14 +102,14 @@ export default function PrivacyPolicy() {
       <section className="legal-section">
         <h2>Data Retention</h2>
         <p>
-         Product data is stored until the product's expiration date is reached, after which it is automatically deleted from the platform.
+         Product data is stored until the product's expiration date is reached, after which it is automatically deleted from the Neonflick-bps.
         </p>
         <p>
          Wallet addresses used to create user accounts are stored until the user decides to delete them. 
-         Users can delete their wallet data either through the wallet management menu on the platform or by sending a request to <a href="mailto:neonflickplatform@gmail.com">neonflickplatform@gmail.com</a>.
+         Users can delete their wallet data either through the wallet management menu on the Neonflick-bps or by sending a request to <a href="mailto:neonflickplatform@gmail.com">neonflickplatform@gmail.com</a>.
         </p>
         <p>
-         Other data is stored only as long as necessary to provide the platform services and to fulfill legal obligations.
+         Other data is stored only as long as necessary to provide the Neonflick-bps services and to fulfill legal obligations.
         </p>
 
       </section>
@@ -97,7 +118,7 @@ export default function PrivacyPolicy() {
       <section className="legal-section">
         <h2>Scope</h2>
         <p>
-          This Privacy Policy applies to all users worldwide. For EU users, GDPR rights are fully enforced.
+          This Privacy Policy applies to all users worldwide. For EU users, GDPR rights are fully applied.
         </p>
       </section>
     </main>

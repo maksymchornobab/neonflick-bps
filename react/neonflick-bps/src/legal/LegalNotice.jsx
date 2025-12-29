@@ -20,7 +20,7 @@ export default function LegalNotice() {
       <main className="legal-page">
         <h1>Legal Notice</h1>
         <section className="legal-section">
-          <h2>Platform Operator</h2>
+          <h2>The Neonflick-bps Operator</h2>
           <p>
             <strong>Name:</strong> Maksym Chornobab
             <br />

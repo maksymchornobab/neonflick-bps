@@ -3,10 +3,10 @@ import { useWalletAuth } from "./WalletAuthContext";
 import Notification from "./Notification";
 
 export default function CreateSection() {
-  const [products, setProducts] = useState([]);
   const { token } = useWalletAuth();
   const fileInputRef = useRef(null);
 
+  const [products, setProducts] = useState([]);
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [title, setTitle] = useState("");
@@ -16,24 +16,41 @@ export default function CreateSection() {
   const [currency, setCurrency] = useState("");
 
   const [commission, setCommission] = useState(null);
-  const [finalPrice, setFinalPrice] = useState(null); // ✅ ОСТАННЯ ЦІНА
+  const [finalPrice, setFinalPrice] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState("");
-  const maxProductsReached = products.length >= 10;
+  const maxProductsReached = products?.length >= 10;
+
+  const [amlFromDB, setAmlFromDB] = useState(false);
+  const [disclaimerFromDB, setDisclaimerFromDB] = useState(false);
+  const [consentsLoaded, setConsentsLoaded] = useState(false);
+  const [consentChecked, setConsentChecked] = useState(false);
+
+  const [wallet, setWallet] = useState(null);
+  const [showCommissionTable, setShowCommissionTable] = useState(false);
+
+  /* ---------------- INIT ---------------- */
+  useEffect(() => {
+    if (!token) return;
+    fetchMeAndConsents();
+  }, [token]);
 
   useEffect(() => {
-    fetchProducts();
+    if (wallet) {
+      fetchProducts();
+    }
+  }, [wallet]);
 
+  useEffect(() => {
     return () => {
       if (imagePreview?.startsWith("blob:")) {
         URL.revokeObjectURL(imagePreview);
       }
     };
-  }, []);
+  }, [imagePreview]);
 
   useEffect(() => {
-    // 🔹 Live калькуляція для SOL
     if (currency === "SOL" && price) {
       calculateCommission(price);
     } else {
@@ -42,14 +59,47 @@ export default function CreateSection() {
     }
   }, [price, currency]);
 
+  /* ---------------- API ---------------- */
   const fetchProducts = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:5000/products");
+      const res = await fetch("http://127.0.0.1:5000/products", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       const data = await res.json();
       setProducts(data.products || []);
     } catch (err) {
       console.error(err);
       setNotification("Failed to fetch products");
+    }
+  };
+
+  const fetchMeAndConsents = async () => {
+    try {
+      setConsentsLoaded(false);
+      const meRes = await fetch("http://127.0.0.1:5000/auth/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!meRes.ok) return;
+      const meData = await meRes.json();
+      const userWallet = meData?.user?.wallet;
+      if (!userWallet) return;
+      setWallet(userWallet);
+
+      const consentRes = await fetch("http://127.0.0.1:5000/auth/consent/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wallet: userWallet }),
+      });
+
+      if (!consentRes.ok) return;
+      const data = await consentRes.json();
+      setAmlFromDB(Boolean(data.aml));
+      setDisclaimerFromDB(Boolean(data.platform_disclaimer));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setConsentsLoaded(true);
     }
   };
 
@@ -59,10 +109,9 @@ export default function CreateSection() {
         `http://127.0.0.1:5000/calculate_commission_sol?price=${priceValue}`
       );
       const data = await res.json();
-
       if (res.ok) {
         setCommission(data.commission);
-        setFinalPrice(data.final_price); // ✅
+        setFinalPrice(data.final_price);
       } else {
         setCommission(null);
         setFinalPrice(null);
@@ -74,6 +123,15 @@ export default function CreateSection() {
     }
   };
 
+  const submitConsent = async (consentName) => {
+    await fetch("http://127.0.0.1:5000/auth/consent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ wallet, consent: consentName }),
+    });
+  };
+
+  /* ---------------- HANDLERS ---------------- */
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -93,33 +151,37 @@ export default function CreateSection() {
     let value = e.target.value;
     if (!/^[0-9.]*$/.test(value)) return;
     if ((value.match(/\./g) || []).length > 1) return;
-
     const [int = "", dec = ""] = value.split(".");
     if (int.length > 7 || dec.length > 3) return;
-
     setPrice(value);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!token || !wallet) {
+      setNotification("Wallet not connected");
+      return;
+    }
 
     if (maxProductsReached) {
       setNotification("Operation canceled: Maximum of 10 products reached.");
       return;
     }
 
+    const needsConsent = !amlFromDB || !disclaimerFromDB;
+    if (needsConsent && !consentChecked) {
+      setNotification("You must accept legal terms");
+      return;
+    }
+
     const numPrice = parseFloat(price);
-    if (
-      !image ||
-      !title.trim() ||
-      !description.trim() ||
-      isNaN(numPrice) ||
-      !currency ||
-      !duration
-    ) {
+    if (!image || !title.trim() || !description.trim() || isNaN(numPrice) || !currency || !duration) {
       setNotification("Please fill all required fields");
       return;
     }
+
+    if (!amlFromDB) await submitConsent("aml");
+    if (!disclaimerFromDB) await submitConsent("platform_disclaimer");
 
     const formData = new FormData();
     formData.append("image", image);
@@ -136,7 +198,6 @@ export default function CreateSection() {
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-
       const data = await res.json();
       setLoading(false);
 
@@ -146,7 +207,6 @@ export default function CreateSection() {
       }
 
       setNotification("Product created successfully!");
-
       handleRemoveImage();
       setTitle("");
       setDescription("");
@@ -155,8 +215,10 @@ export default function CreateSection() {
       setDuration("");
       setCommission(null);
       setFinalPrice(null);
+      setConsentChecked(false);
 
       fetchProducts();
+      fetchMeAndConsents();
     } catch (err) {
       console.error(err);
       setLoading(false);
@@ -164,6 +226,9 @@ export default function CreateSection() {
     }
   };
 
+  const needsConsent = consentsLoaded && (!amlFromDB || !disclaimerFromDB);
+
+  /* ---------------- RENDER ---------------- */
   return (
     <section id="create" className="section">
       {notification && (
@@ -171,7 +236,10 @@ export default function CreateSection() {
       )}
 
       <form className="create-form" onSubmit={handleSubmit} encType="multipart/form-data">
-        <h2>Create product ({products.length}/10)</h2>
+      <p style={{ color: "red", fontSize: "20px", fontWeight: "bold", marginTop: "10px", marginBottom: "8px", textAlign: "center" }}>
+        Warning: All entered data will be lost if you leave this page!
+      </p>
+        <h2>Create product ({products?.length || 0}/10)</h2>
 
         {maxProductsReached && (
           <p style={{ color: "red", fontWeight: "bold" }}>
@@ -261,9 +329,31 @@ export default function CreateSection() {
 
         {/* 🔹 Commission */}
         {currency === "SOL" && commission !== null && (
-          <p style={{ color: "#00ffff", fontWeight: "bold" }}>
-            Commission: {commission} SOL
+          <p
+            style={{ color: "#00ffff", fontWeight: "bold", cursor: "pointer" }}
+            onClick={() => setShowCommissionTable(!showCommissionTable)}
+          >
+            <strong className="commission-word">Commission:</strong> {commission} SOL (click to view table)
           </p>
+        )}
+
+        {/* 🔹 Commission Table */}
+        {showCommissionTable && currency === "SOL" && (
+          <table className="commission-table" style={{ marginBottom: "10px" }}>
+            <thead>
+              <tr>
+                <th>Price Range (SOL)</th>
+                <th>Commission</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>0.001 – 0.01</td><td>10%</td></tr>
+              <tr><td>0.01 – 0.1</td><td>5%</td></tr>
+              <tr><td>0.1 – 1</td><td>1%</td></tr>
+              <tr><td>1 – 100</td><td>0.25%</td></tr>
+              <tr><td>100 - 1 000 000</td><td>0.25 SOL fixed</td></tr>
+            </tbody>
+          </table>
         )}
 
         {/* 🔹 Final price */}
@@ -272,6 +362,43 @@ export default function CreateSection() {
             You will receive: {finalPrice} SOL
           </p>
         )}
+
+        {needsConsent && (
+  <label
+    className="consent-box"
+    style={{
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "8px",
+      cursor: "pointer",
+      fontSize: "16px", // можна підкоригувати
+      color: "#00ffff"
+
+    }}
+  >
+    <input
+      type="checkbox"
+      checked={consentChecked}
+      onChange={(e) => setConsentChecked(e.target.checked)}
+      style={{
+        width: "18px",   // більший квадратик
+        height: "18px",
+        flexShrink: 0,   // не стискається
+        cursor: "pointer",
+      }}
+    />
+    I accept{" "}
+    <a href="/legal/aml" target="_blank" style={{ color: "#00ffff", textDecoration: "underline", margin: "0 2px", fontWeight: "bold" }}>
+      AML Policy
+    </a>{" "}
+    and{" "}
+    <a href="/legal/disclaimer" target="_blank" style={{color: "#00ffff", textDecoration: "underline", margin: "0 2px", fontWeight: "bold" }}>
+      Platform Disclaimer
+    </a>
+  </label>
+)}
+
+
 
         <button disabled={loading || maxProductsReached}>
           {loading ? "Creating..." : "Create product"}

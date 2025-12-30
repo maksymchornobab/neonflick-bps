@@ -221,33 +221,51 @@ def auth_me():
         }
     })
 
+@app.route("/auth/consent/check", methods=["POST"])
+def check_required_consents():
+    data = request.json
+    wallet = data.get("wallet")
+
+    if not wallet or not isinstance(wallet, str):
+        return jsonify({"error": "wallet must be string"}), 400
+
+    user = users.find_one({"wallet": wallet})
+    if not user:
+        return jsonify({"error": "user not found"}), 404
+
+    consents = user.get("consents", [])
+
+    return jsonify({
+        "aml": "aml" in consents,
+        "platform_disclaimer": "platform_disclaimer" in consents
+    })
 
 @app.route("/auth/consent", methods=["POST"])
 def add_consent():
     data = request.json
     wallet = data.get("wallet")
-    consent = data.get("consent")  # строка, наприклад "terms"
+    consent = data.get("consent")
 
     if not wallet or not isinstance(wallet, str):
         return jsonify({"error": "wallet must be string"}), 400
     if not consent or not isinstance(consent, str):
         return jsonify({"error": "consent must be string"}), 400
 
-    user = users.find_one({"wallet": wallet})
     now = datetime.utcnow()
 
-    if not user:
+    result = users.update_one(
+        {"wallet": wallet},
+        {
+            "$addToSet": {"consents": consent},
+            "$set": {f"consent_given_at.{consent}": now}
+        }
+    )
+
+    if result.matched_count == 0:
         return jsonify({"error": "user not found"}), 404
 
-    consents = user.get("consents", [])
-    consent_given_at = user.get("consent_given_at", {})
+    return jsonify({"status": "ok"})
 
-    if consent not in consents:
-        consents.append(consent)
-        consent_given_at[consent] = now
-        users.update_one({"wallet": wallet}, {"$set": {"consents": consents, "consent_given_at": consent_given_at}})
-
-    return jsonify({"status": "ok", "consents": consents})
 
 
 # ---------- Роут створення продукту ----------
@@ -697,8 +715,17 @@ def add_product_transaction(product_id):
         return jsonify({"error": "JSON body required"}), 400
 
     tx_hash = data.get("tx_hash")
+    consents = data.get("consents", [])        # список назв згод (покупець)
+    timestamps = data.get("timestamps", [])    # список часів погодження ISO або timestamp
+
     if not tx_hash:
         return jsonify({"error": "tx_hash required"}), 400
+
+    if not isinstance(consents, list) or not isinstance(timestamps, list):
+        return jsonify({"error": "consents and timestamps must be lists"}), 400
+
+    if len(consents) != len(timestamps):
+        return jsonify({"error": "consents and timestamps lists must have same length"}), 400
 
     try:
         product_object_id = ObjectId(product_id)
@@ -711,16 +738,23 @@ def add_product_transaction(product_id):
 
     # 🔒 захист від дублювання транзакції
     stats = product.get("stats", {})
-    existing_hashes = stats.get("transactions", [])
+    existing_hashes = [t.get("hash") for t in stats.get("transactions", []) if isinstance(t, dict)]
     if tx_hash in existing_hashes:
         return jsonify({"error": "transaction already recorded"}), 409
+
+    # структура нового запису
+    new_tx = {
+        "hash": tx_hash,
+        "consents": consents,
+        "timestamps": timestamps
+    }
 
     result = products.update_one(
         {"_id": product_object_id},
         {
             "$set": {"stats.status": "used"},
             "$inc": {"stats.count": 1},
-            "$push": {"stats.transactions": tx_hash},
+            "$push": {"stats.transactions": new_tx},
         }
     )
 
@@ -730,8 +764,9 @@ def add_product_transaction(product_id):
     return jsonify({
         "success": True,
         "product_id": product_id,
-        "tx_hash": tx_hash
+        "transaction": new_tx
     }), 200
+
 
 
 @app.route("/api/generate-receipt", methods=["POST"])

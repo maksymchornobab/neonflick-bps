@@ -13,6 +13,7 @@ export default function EditSection({ product, onCancel }) {
   const [description, setDescription] = useState(product.description);
   const [price, setPrice] = useState(String(product.price));
   const [currency, setCurrency] = useState(product.currency);
+  const [showCommissionTable, setShowCommissionTable] = useState(false);
 
   const [commission, setCommission] = useState(null);
   const [finalPrice, setFinalPrice] = useState(null); // ✅
@@ -137,6 +138,9 @@ export default function EditSection({ product, onCancel }) {
       )}
 
       <form className="create-form" onSubmit={handleSubmit} encType="multipart/form-data">
+      <p style={{ color: "red", fontSize: "20px", fontWeight: "bold", marginTop: "10px", marginBottom: "8px", textAlign: "center" }}>
+        Warning: All entered data will be lost if you leave this page!
+      </p>
         <h2>Edit product</h2>
 
         {imagePreview && (
@@ -198,9 +202,31 @@ export default function EditSection({ product, onCancel }) {
 
         {/* 🔹 Commission */}
         {currency === "SOL" && commission !== null && (
-          <p style={{ color: "#00ffff", fontWeight: "bold" }}>
-            Commission: {commission} SOL
+          <p
+            style={{ color: "#00ffff", fontWeight: "bold", cursor: "pointer" }}
+            onClick={() => setShowCommissionTable(!showCommissionTable)}
+          >
+            <strong className="commission-word">Commission:</strong> {commission} SOL (click to view table)
           </p>
+        )}
+
+        {/* 🔹 Commission Table */}
+        {showCommissionTable && currency === "SOL" && (
+          <table className="commission-table" style={{ marginBottom: "10px" }}>
+            <thead>
+              <tr>
+                <th>Price Range (SOL)</th>
+                <th>Commission</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>0.001 – 0.01</td><td>10%</td></tr>
+              <tr><td>0.01 – 0.1</td><td>5%</td></tr>
+              <tr><td>0.1 – 1</td><td>1%</td></tr>
+              <tr><td>1 – 100</td><td>0.25%</td></tr>
+              <tr><td>100 - 1 000 000</td><td>0.25 SOL fixed</td></tr>
+            </tbody>
+          </table>
         )}
 
         {/* 🔹 Final price */}

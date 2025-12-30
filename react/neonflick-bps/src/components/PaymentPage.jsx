@@ -54,12 +54,16 @@ function PaymentPage() {
   const [paying, setPaying] = useState(false);
   const [txHash, setTxHash] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+
+  // 🔹 Consent checkbox state
+  const [consentChecked, setConsentChecked] = useState(false);
+
   const RPC_URL = process.env.REACT_APP_SOLANA_RPC;
   
   const connection = useMemo(
-  () => new Connection(RPC_URL, "confirmed"),
-  []
-);
+    () => new Connection(RPC_URL, "confirmed"),
+    []
+  );
 
   // 🔹 Fetch product
   useEffect(() => {
@@ -102,6 +106,7 @@ function PaymentPage() {
   const handlePay = async () => {
     if (!product?._id) return setNotification("Product not loaded");
     if (!publicKey || !signTransaction) return setNotification("Connect wallet first");
+    if (!consentChecked) return setNotification("You must accept all consents");
 
     try {
       setPaying(true);
@@ -119,41 +124,51 @@ function PaymentPage() {
 
       if (!res.ok) throw new Error(await res.text());
       const { blockhash, transfers } = await res.json();
-      // 🔹 Створюємо транзакцію
-const tx = new Transaction({ recentBlockhash: blockhash, feePayer: publicKey });
 
-// 🔹 Сумуємо всі lamports для логування
-let totalLamports = 0;
+      const tx = new Transaction({ recentBlockhash: blockhash, feePayer: publicKey });
+      let totalLamports = 0;
+      transfers.forEach(t => {
+        if (t.to && t.lamports > 0) {
+          totalLamports += t.lamports;
+          tx.add(
+            SystemProgram.transfer({
+              fromPubkey: publicKey,
+              toPubkey: new PublicKey(t.to),
+              lamports: t.lamports,
+            })
+          );
+        }
+      });
 
-transfers.forEach(t => {
-  if (t.to && t.lamports > 0) {
-    totalLamports += t.lamports;
-    tx.add(
-      SystemProgram.transfer({
-        fromPubkey: publicKey,
-        toPubkey: new PublicKey(t.to),
-        lamports: t.lamports,
-      })
-    );
-  }
-});
+      setNotification("Waiting for wallet confirmation…");
+      const signedTx = await signTransaction(tx);
+      const signature = await connection.sendRawTransaction(signedTx.serialize());
+      await connection.confirmTransaction(signature);
 
-// 🔹 Лог балансу гаманця
-const walletBalance = await connection.getBalance(publicKey);
+      // 🔹 Build consent payload
+      const consentNames = [
+        "terms",
+        "privacy",
+        "withdrawal",
+        "platform_disclaimer",
+        "aml",
+        "crypto_risk_disclosure"
+      ];
+      const timestamps = {};
+      const now = new Date().toISOString();
+      consentNames.forEach(name => {
+        timestamps[name] = now;
+      });
 
-// 🔹 Очікуємо підтвердження від користувача
-setNotification("Waiting for wallet confirmation…");
-
-const signedTx = await signTransaction(tx);
-const signature = await connection.sendRawTransaction(signedTx.serialize());
-await connection.confirmTransaction(signature);
-
-
-      // ✅ Update product on backend
+      // ✅ Send transaction + consents to backend
       await fetch(`http://127.0.0.1:5000/api/products/${product._id}/transaction`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tx_hash: signature }),
+        body: JSON.stringify({
+          tx_hash: signature,
+          consents: consentNames,
+          timestamps: Object.values(timestamps),
+        }),
       });
 
       setTxHash(signature);
@@ -226,9 +241,36 @@ await connection.confirmTransaction(signature);
           <WalletMultiButton />
         </div>
 
+        {/* 🔹 Consent checkbox */}
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            margin: "12px 0",
+            cursor: "pointer",
+            fontSize: "14px",
+            color: "#00ffff",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={consentChecked}
+            onChange={(e) => setConsentChecked(e.target.checked)}
+            style={{ width: "18px", height: "18px", flexShrink: 0, cursor: "pointer" }}
+          />
+          I accept{" "}
+          <a href="/legal/terms" target="_blank" style={{ margin: "0 2px", textDecoration: "underline" }}>Terms & Conditions</a>,{" "}
+          <a href="/legal/privacy" target="_blank" style={{ margin: "0 2px", textDecoration: "underline" }}>Privacy Policy</a>,{" "}
+          <a href="/legal/withdrawal" target="_blank" style={{ margin: "0 2px", textDecoration: "underline" }}>Withdrawal Information</a>,{" "}
+          <a href="/legal/disclaimer" target="_blank" style={{ margin: "0 2px", textDecoration: "underline" }}>Platform Disclaimer</a>,{" "}
+          <a href="/legal/aml" target="_blank" style={{ margin: "0 2px", textDecoration: "underline" }}>AML/Abuse Prevention</a>, and{" "}
+          <a href="/legal/crypto-risks" target="_blank" style={{ margin: "0 2px", textDecoration: "underline" }}>Crypto Risk Disclosure</a>
+        </label>
+
         <button
           className="payment-card__pay-btn"
-          disabled={!publicKey || paying || timer <= 0}
+          disabled={!publicKey || paying || timer <= 0 || !consentChecked}
           onClick={handlePay}
         >
           {timer <= 0 ? "Expired" : paying ? "Processing…" : "Pay now"}

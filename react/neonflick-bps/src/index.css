@@ -1792,3 +1792,53 @@ body {
   box-shadow: 0 0 20px #00ffff;
 }
 
+/* Consent wrapper */
+.consent-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0;
+  cursor: pointer;
+  font-size: 14px;
+  color: #00ffff;
+  max-width: 100%;
+}
+
+/* Checkbox */
+.consent-checkbox {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+/* Text container */
+.consent-text {
+  display: block;
+  line-height: 1.5;
+  max-width: 100%;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Links */
+.consent-text a {
+  margin: 0 2px;
+  text-decoration: underline;
+  color: #00ffff;
+  font-weight: bold;
+}
+
+.consent-text a:hover {
+  text-shadow: 0 0 6px #00ffff;
+}
+
+.pay-instr {
+  display: flex;
+  margin-top: 8px;
+  justify-content: center;
+  color: #00ffff;
+  text-decoration: underline;
+  font-weight: bold;
+}

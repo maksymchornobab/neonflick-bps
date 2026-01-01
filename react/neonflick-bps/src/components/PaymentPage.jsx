@@ -242,31 +242,37 @@ function PaymentPage() {
         </div>
 
         {/* 🔹 Consent checkbox */}
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            margin: "12px 0",
-            cursor: "pointer",
-            fontSize: "14px",
-            color: "#00ffff",
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={consentChecked}
-            onChange={(e) => setConsentChecked(e.target.checked)}
-            style={{ width: "18px", height: "18px", flexShrink: 0, cursor: "pointer" }}
-          />
-          I accept{" "}
-          <a href="/legal/terms" target="_blank" style={{ margin: "0 2px", textDecoration: "underline" }}>Terms & Conditions</a>,{" "}
-          <a href="/legal/privacy" target="_blank" style={{ margin: "0 2px", textDecoration: "underline" }}>Privacy Policy</a>,{" "}
-          <a href="/legal/withdrawal" target="_blank" style={{ margin: "0 2px", textDecoration: "underline" }}>Withdrawal Information</a>,{" "}
-          <a href="/legal/disclaimer" target="_blank" style={{ margin: "0 2px", textDecoration: "underline" }}>Platform Disclaimer</a>,{" "}
-          <a href="/legal/aml" target="_blank" style={{ margin: "0 2px", textDecoration: "underline" }}>AML/Abuse Prevention</a>, and{" "}
-          <a href="/legal/crypto-risks" target="_blank" style={{ margin: "0 2px", textDecoration: "underline" }}>Crypto Risk Disclosure</a>
-        </label>
+        <label className="consent-label">
+  <input
+    type="checkbox"
+    className="consent-checkbox"
+    checked={consentChecked}
+    onChange={(e) => setConsentChecked(e.target.checked)}
+  />
+
+  <span className="consent-text">
+    I accept{" "}
+    <a href="/legal/terms" target="_blank" rel="noopener noreferrer">
+      Terms & Conditions
+    </a>,{" "}
+    <a href="/legal/privacy" target="_blank" rel="noopener noreferrer">
+      Privacy Policy
+    </a>,{" "}
+    <a href="/legal/withdrawal" target="_blank" rel="noopener noreferrer">
+      Withdrawal Information
+    </a>,{" "}
+    <a href="/legal/disclaimer" target="_blank" rel="noopener noreferrer">
+      Platform Disclaimer
+    </a>,{" "}
+    <a href="/legal/aml" target="_blank" rel="noopener noreferrer">
+      AML / Abuse Prevention
+    </a>, and{" "}
+    <a href="/legal/crypto-risks" target="_blank" rel="noopener noreferrer">
+      Crypto Risk Disclosure
+    </a>
+  </span>
+</label>
+
 
         <button
           className="payment-card__pay-btn"
@@ -275,6 +281,8 @@ function PaymentPage() {
         >
           {timer <= 0 ? "Expired" : paying ? "Processing…" : "Pay now"}
         </button>
+
+        <a href="/howto/payment-instruction" target="_blank" rel="noopener noreferrer" className="pay-instr">Payment Instruction</a>
       </div>
 
       {descriptionOpen && (

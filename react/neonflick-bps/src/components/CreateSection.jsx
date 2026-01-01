@@ -397,12 +397,20 @@ export default function CreateSection() {
     </a>
   </label>
 )}
-
-
-
+        <strong style={{fontWeight: "bold", justifyContent: "center", display: "flex", color: "#00ffff"}}>Attention!</strong>
+        <p style={{color: "#00ffff", textAlign: "center" }}>
+         Make sure that you have at least <strong style={{fontWeight: "bold", textDecoration: "underline"}}>0.001 SOL</strong> on your wallet.
+        <a
+        href="/howto/payment-instruction"
+        style={{ textDecoration: "underline", color: "#00ffff", fontWeight: "bold", marginLeft: "4px" }}
+        >
+        Read More
+        </a>
+        </p>
         <button disabled={loading || maxProductsReached}>
           {loading ? "Creating..." : "Create product"}
         </button>
+
       </form>
 
       {imagePreview && (

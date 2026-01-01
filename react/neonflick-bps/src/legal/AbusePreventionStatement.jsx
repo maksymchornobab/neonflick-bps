@@ -29,21 +29,29 @@ export default function LegalNotice() {
         </section>
 
         <section className="legal-section">
-          <h2>Monitoring & Detection</h2>
-          <p>
-            The Neonflick-bps reserves the right to:
-          </p>
-          <ul>
-            <li>monitor platform activity for suspicious or abusive behavior,</li>
-            <li>analyze transactions, wallet interactions, and usage patterns,</li>
-            <li>apply automated or manual checks where legally permitted.</li>
-          </ul>
-          <p></p>
-          <p>
-            The Neonflick-bps does not guarantee continuous monitoring and does not act 
-            as a regulated financial institution.
-          </p>
-        </section>
+  <h2>Monitoring & Detection</h2>
+  <p>
+    The Neonflick-bps reserves the right to:
+  </p>
+  <ul>
+    <li>monitor platform activity for suspicious or abusive behavior,</li>
+    <li>analyze transactions, wallet interactions, and usage patterns,</li>
+    <li>apply automated or manual checks where legally permitted,</li>
+    <li>
+      restrict, suspend, or block wallet addresses associated with suspicious,
+      abusive, fraudulent, or potentially unlawful activity.
+    </li>
+  </ul>
+  <p>
+    Such actions may be taken without prior notice where necessary to protect
+    the platform, its users, or to ensure legal compliance.
+  </p>
+  <p>
+    The Neonflick-bps does not guarantee continuous monitoring and does not act
+    as a regulated financial institution.
+  </p>
+</section>
+
 
         <section className="legal-section">
           <h2>Prohibited Activities</h2>

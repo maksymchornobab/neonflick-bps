@@ -19,6 +19,7 @@ export default function Footer() {
           <Link to="/legal/disclaimer">Platform Disclaimer</Link>
           <Link to="/legal/crypto-risks">Crypto Risk Disclosure</Link>
           <Link to="/legal/aml">AML & Abuse Policy</Link>
+          <Link to="/howto/payment-instruction">PaymentInstruction</Link>
         </nav>
       </div>
     </footer>

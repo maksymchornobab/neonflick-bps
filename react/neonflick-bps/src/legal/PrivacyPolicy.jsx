@@ -52,19 +52,42 @@ export default function PrivacyPolicy() {
 
       {/* Data Collected */}
       <section className="legal-section">
-        <h2>Data Collected</h2>
-        <p>We collect the following types of data:</p>
-        <ul>
-          <li><strong>User information:</strong> wallet address, creation date, last login</li>
-          <li><strong>Product information:</strong> title, description, price, commission, final price, currency, status, transaction stats, image, cloud storage path, creation and expiration dates</li>
-          <li><strong>Transaction information:</strong> transaction hash (tx_hash); buyer wallet used temporarily for receipt generation (not stored)</li>
-        </ul>
-        <p></p>
-        <p>
-          Processing of personal data is based on the performance of a contract and legitimate 
-          interest in operating the platform in accordance with Article 6(1)(b) and (f) GDPR.
-        </p>
-      </section>
+  <h2>Data Collected</h2>
+  <p>We collect the following types of data:</p>
+  <ul>
+    <li>
+      <strong>User information:</strong> wallet address, account creation date,
+      last login
+    </li>
+    <li>
+      <strong>Product information:</strong> title, description, price,
+      commission, final price, currency, status, transaction statistics, image,
+      cloud storage path, creation and expiration dates
+    </li>
+    <li>
+      <strong>Transaction information:</strong> transaction hash (tx_hash);
+      buyer wallet address used temporarily for receipt generation (not stored)
+    </li>
+    <li>
+      <strong>Consent records:</strong> records of user consents provided on the
+      platform, including the type of consent and the timestamp of acceptance.
+      This may include, where applicable:
+      <ul>
+        <li>crypto risk disclosure</li>
+        <li>cookies and privacy policy</li>
+        <li>terms and conditions</li>
+        <li>AML / abuse prevention policy</li>
+        <li>platform disclaimer</li>
+      </ul>
+    </li>
+  </ul>
+  <p>
+    Processing of personal data is based on the performance of a contract and
+    the legitimate interest in operating, securing, and maintaining the
+    platform in accordance with Article 6(1)(b) and (f) GDPR.
+  </p>
+</section>
+
 
       {/* Data Processors */}
       <section className="legal-section">

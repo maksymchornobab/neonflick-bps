@@ -3,11 +3,16 @@ import { createContext, useContext, useEffect, useState } from "react";
 const WalletAuthContext = createContext(null);
 
 export function WalletAuthProvider({ children }) {
-  const [user, setUser] = useState(null); // активний акаунт
-  const [token, setToken] = useState(null); // JWT
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [connectedWallet, setConnectedWallet] = useState(null); // гаманець для UI
-  const [pendingWallet, setPendingWallet] = useState(null); // гаманець для ChangeWallet
+
+  const [connectedWallet, setConnectedWallet] = useState(null);
+  const [pendingWallet, setPendingWallet] = useState(null);
+
+  // 🔒 Blocked wallet modal state
+  const [blockedWallet, setBlockedWallet] = useState(null);
+  const [showBlockedModal, setShowBlockedModal] = useState(false);
 
   // 🔁 Restore session
   useEffect(() => {
@@ -26,12 +31,14 @@ export function WalletAuthProvider({ children }) {
           setUser(data.user);
           setToken(savedToken);
           setConnectedWallet(data.user.wallet);
+        } else {
+          localStorage.removeItem("jwt_token");
         }
       })
       .finally(() => setLoading(false));
   }, []);
 
-  // 🔐 Login / ChangeWallet
+  // 🔐 Login / Change wallet
   const loginWithWallet = async (publicKey) => {
     try {
       const res = await fetch("http://127.0.0.1:5000/auth/wallet", {
@@ -40,7 +47,19 @@ export function WalletAuthProvider({ children }) {
         body: JSON.stringify({ wallet: publicKey }),
       });
 
+      // 🚫 BLOCKED WALLET
+      if (res.status === 403) {
+        const data = await res.json();
+
+        if (data?.error === "wallet_blocked") {
+          setBlockedWallet(publicKey);
+          setShowBlockedModal(true);
+          return;
+        }
+      }
+
       const data = await res.json();
+
       if (data?.user && data?.token) {
         setUser(data.user);
         setToken(data.token);
@@ -61,16 +80,24 @@ export function WalletAuthProvider({ children }) {
     localStorage.removeItem("jwt_token");
 
     if (window.solana?.isPhantom) {
-      try { await window.solana.disconnect(); } catch {}
+      try {
+        await window.solana.disconnect();
+      } catch {}
     }
   };
 
-  // 🔹 ChangeWallet action
+  // 🔁 Change wallet confirm
   const changeWallet = async () => {
     if (pendingWallet) {
       await loginWithWallet(pendingWallet);
       setPendingWallet(null);
     }
+  };
+
+  // ❌ Close blocked modal
+  const closeBlockedModal = () => {
+    setShowBlockedModal(false);
+    setBlockedWallet(null);
   };
 
   return (
@@ -85,6 +112,11 @@ export function WalletAuthProvider({ children }) {
         loginWithWallet,
         logout,
         loading,
+
+        // 🔒 blocked wallet modal
+        showBlockedModal,
+        blockedWallet,
+        closeBlockedModal,
       }}
     >
       {children}

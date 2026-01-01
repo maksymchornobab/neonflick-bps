@@ -338,15 +338,15 @@ export default function ProductsSection({ onEdit }) {
                           </div>
 
                           <ul className="tx-overlay-content">
-                            {product.stats.transactions.map((tx, i) => (
-                              <li
-                                key={i}
-                                className="tx-hash"
-                                onClick={() => copyToClipboard(tx)}
-                              >
-                                {tx.slice(0, 20)}...
-                              </li>
-                            ))}
+                           {product.stats.transactions.map((tx, i) => (
+                            <li
+                            key={i}
+                            className="tx-hash"
+                            onClick={() => copyToClipboard(tx.hash)}
+                            >
+                            {tx.hash.slice(0, 20)}...
+                            </li>
+                           ))}
                           </ul>
                         </div>
                       )}

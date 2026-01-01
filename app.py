@@ -20,6 +20,7 @@ from solana.transaction import Transaction
 from solana.system_program import TransferParams, transfer
 from solana.publickey import PublicKey
 from fpdf import FPDF
+from fpdf.enums import XPos, YPos
 
 # ---------------- CONFIG ----------------
 load_dotenv()
@@ -34,6 +35,7 @@ client = MongoClient(uri)
 db = client.get_database("neonflick-bps")
 users = db.get_collection("users")
 products = db.get_collection("products")
+blocked_users = db.get_collection("blocked_users")
 
 # ---------- LOGGING ----------
 logging.basicConfig(level=logging.DEBUG)
@@ -143,31 +145,37 @@ def root():
 def auth_wallet():
     data = request.json
     wallet = data.get("wallet")
-    consent = data.get("consent", False)  # нове поле, bool
+    consent = data.get("consent", False)
 
     if not wallet or not isinstance(wallet, str):
         return jsonify({"error": "wallet must be string"}), 400
     if not isinstance(consent, bool):
         return jsonify({"error": "consent must be boolean"}), 400
 
+    # 🔒 BLOCKED WALLET CHECK (FIRST)
+    if blocked_users.find_one({"wallet": wallet}):
+        return jsonify({
+            "error": "wallet_blocked",
+            "message": "This wallet address is blocked from using the platform."
+        }), 403
+
     user = users.find_one({"wallet": wallet})
     now = datetime.utcnow()
 
-    # Список згод користувача
     consents = []
 
-    # Якщо користувач новий, автоматично погоджуємо cookies
     if not user:
         if consent:
             consents.append("crypto_risk_disclosure")
-        consents.append("cookies")  # автоматична згода на cookies
+
+        consents.append("cookies")
 
         users.insert_one({
             "wallet": wallet,
             "created_at": now,
             "last_login": now,
             "consents": consents,
-            "consent_given_at": {c: now for c in consents}  # відзначаємо час кожної згоди
+            "consent_given_at": {c: now for c in consents}
         })
         status = "created"
     else:
@@ -178,7 +186,6 @@ def auth_wallet():
             user_consents.append("crypto_risk_disclosure")
             update_fields["consents"] = user_consents
 
-            # Додаємо timestamp для нової згоди
             consent_times = user.get("consent_given_at", {})
             consent_times["crypto_risk_disclosure"] = now
             update_fields["consent_given_at"] = consent_times
@@ -186,16 +193,21 @@ def auth_wallet():
         users.update_one({"wallet": wallet}, {"$set": update_fields})
         status = "login"
 
-    # Генеруємо JWT
     token = jwt.encode(
         {"wallet": wallet, "exp": now + timedelta(days=7)},
         app.config["SECRET_KEY"],
         algorithm="HS256"
     )
+
     if isinstance(token, bytes):
         token = token.decode("utf-8")
 
-    return jsonify({"status": status, "user": {"wallet": wallet}, "token": token})
+    return jsonify({
+        "status": status,
+        "user": {"wallet": wallet},
+        "token": token
+    })
+
 
 
 
@@ -208,8 +220,14 @@ def auth_me():
         return jsonify({"user": None}), 200
 
     wallet = payload.get("wallet")
-    user = users.find_one({"wallet": wallet})
+    if not wallet:
+        return jsonify({"user": None}), 200
 
+    # 🔒 BLOCKED WALLET CHECK
+    if blocked_users.find_one({"wallet": wallet}):
+        return jsonify({"user": None}), 200
+
+    user = users.find_one({"wallet": wallet})
     if not user:
         return jsonify({"user": None}), 200
 
@@ -220,6 +238,7 @@ def auth_me():
             "consent_given_at": user.get("consent_given_at", {})
         }
     })
+
 
 @app.route("/auth/consent/check", methods=["POST"])
 def check_required_consents():
@@ -715,17 +734,13 @@ def add_product_transaction(product_id):
         return jsonify({"error": "JSON body required"}), 400
 
     tx_hash = data.get("tx_hash")
-    consents = data.get("consents", [])        # список назв згод (покупець)
-    timestamps = data.get("timestamps", [])    # список часів погодження ISO або timestamp
+    consents = data.get("consents")  # список назв згод (покупець)
 
     if not tx_hash:
         return jsonify({"error": "tx_hash required"}), 400
 
-    if not isinstance(consents, list) or not isinstance(timestamps, list):
-        return jsonify({"error": "consents and timestamps must be lists"}), 400
-
-    if len(consents) != len(timestamps):
-        return jsonify({"error": "consents and timestamps lists must have same length"}), 400
+    if not isinstance(consents, list) or not consents:
+        return jsonify({"error": "consents must be a non-empty list"}), 400
 
     try:
         product_object_id = ObjectId(product_id)
@@ -738,15 +753,25 @@ def add_product_transaction(product_id):
 
     # 🔒 захист від дублювання транзакції
     stats = product.get("stats", {})
-    existing_hashes = [t.get("hash") for t in stats.get("transactions", []) if isinstance(t, dict)]
+    existing_hashes = [
+        t.get("hash") for t in stats.get("transactions", [])
+        if isinstance(t, dict)
+    ]
+
     if tx_hash in existing_hashes:
         return jsonify({"error": "transaction already recorded"}), 409
 
-    # структура нового запису
+    # ⏱ один зафіксований момент часу
+    now_iso = datetime.utcnow().isoformat() + "Z"
+
+    # 🧾 buyer consents structure
+    buyer_consents = {
+        consent: now_iso for consent in consents
+    }
+
     new_tx = {
         "hash": tx_hash,
-        "consents": consents,
-        "timestamps": timestamps
+        "buyer_consents": buyer_consents
     }
 
     result = products.update_one(
@@ -767,53 +792,58 @@ def add_product_transaction(product_id):
         "transaction": new_tx
     }), 200
 
+from fpdf import FPDF
+from fpdf.enums import XPos, YPos
+from datetime import datetime
+from flask import request, jsonify, send_file
+import io
+import requests
 
 
 @app.route("/api/generate-receipt", methods=["POST"])
 def generate_receipt():
     data = request.get_json()
 
-    # 🔹 Перевірка обов'язкових полів
     required_fields = [
-        "product_id", "title", "price", "currency",
-        "sellerWallet", "buyer_wallet", "tx_hash", "image"
+        "product_id",
+        "title",
+        "price",
+        "currency",
+        "sellerWallet",
+        "buyer_wallet",
+        "tx_hash",
+        "image"
     ]
     missing = [f for f in required_fields if f not in data]
     if missing:
         return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
 
-    pdf = FPDF('P', 'mm', 'A4')
+    pdf = FPDF()
     pdf.add_page()
 
-    # 🔲 ЧОРНИЙ ФОН
+    # Background
     pdf.set_fill_color(0, 0, 0)
-    pdf.rect(0, 0, pdf.w, pdf.h, 'F')
-
+    pdf.rect(0, 0, pdf.w, pdf.h, "F")
     pdf.set_auto_page_break(auto=True, margin=15)
 
-    # 🎨 КОЛЬОРИ
     CYAN = (0, 255, 255)
     WHITE = (255, 255, 255)
 
     pdf.set_draw_color(*CYAN)
-    pdf.set_font("Arial", '', 12)
+    pdf.set_font("Helvetica", size=12)
 
-    # 🔹 Заголовок (cyan)
+    # Header
     pdf.set_text_color(*CYAN)
-    pdf.set_font("Arial", 'B', 18)
-    pdf.cell(0, 12, "Payment Receipt", ln=True, align='C')
+    pdf.set_font("Helvetica", style="B", size=18)
+    pdf.cell(0, 12, "Electronic Payment Receipt", align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(6)
 
-    # 🔹 Лінія під заголовком
-    pdf.set_draw_color(*CYAN)
-    y = pdf.get_y()
-    pdf.line(15, y, 195, y)
+    pdf.line(15, pdf.get_y(), 195, pdf.get_y())
     pdf.ln(8)
 
-
-    # 🔹 Картинка продукту + рамка
+    # Product image
     try:
-        response = requests.get(data["image"])
+        response = requests.get(data["image"], timeout=5)
         response.raise_for_status()
         img_buffer = io.BytesIO(response.content)
 
@@ -823,66 +853,101 @@ def generate_receipt():
         y_pos = pdf.get_y()
 
         pdf.image(img_buffer, x=x_pos, y=y_pos, w=img_width, h=img_height)
-
-        # рамка
         pdf.rect(x_pos, y_pos, img_width, img_height)
-
         pdf.ln(img_height + 6)
-
-    except Exception as e:
-        print("Failed to load image:", e)
+    except Exception:
+        pass
 
     page_width = pdf.w - 2 * pdf.l_margin
-    label_width = 50
+    label_width = 55
 
-    # 🔹 Функція для рядків
     def add_row(label, value):
-        # заголовок — CYAN
         pdf.set_text_color(*CYAN)
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(label_width, 8, label, ln=False)
+        pdf.set_font("Helvetica", style="B", size=12)
+        pdf.cell(
+            label_width,
+            8,
+            label,
+            new_x=XPos.RIGHT,
+            new_y=YPos.TOP
+        )
 
-        # значення — WHITE
-        pdf.ln(8)
         pdf.set_text_color(*WHITE)
-        pdf.set_font("Arial", '', 12)
-        pdf.multi_cell(page_width, 8, str(value))
-
+        pdf.set_font("Helvetica", size=12)
+        pdf.multi_cell(page_width - label_width, 8, str(value))
         pdf.ln(2)
 
-    # 🔹 Дані у потрібному порядку
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    add_row("Date:", now_str)
-    add_row("Product Name:", data.get("title"))
-    add_row("Price:", f"{data.get('price')} {data.get('currency')}")
-    add_row("Buyer Wallet Address:", data.get("buyer_wallet"))
-    add_row("Seller Wallet Address:", data.get("sellerWallet"))
-    add_row("Commission (Paid by Seller):", f"{data.get('commission', 0)} {data.get('currency')}")
-    add_row("Transaction Hash:", data.get("tx_hash"))
+    now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
 
-    # 🔹 Розділювальна лінія
+    add_row("Receipt Date:", now_str)
+    add_row("Product:", data["title"])
+    add_row("Amount Paid:", f"{data['price']} {data['currency']}")
+    add_row("Buyer Wallet:", data["buyer_wallet"])
+    add_row("Seller Wallet:", data["sellerWallet"])
+    add_row("Transaction Hash:", data["tx_hash"])
+
+    if data.get("commission"):
+        add_row(
+            "Platform Commission:",
+            f"{data['commission']} {data['currency']} (paid by seller)"
+        )
+
     pdf.ln(4)
-    pdf.set_draw_color(*CYAN)
     pdf.line(15, pdf.get_y(), 195, pdf.get_y())
-
-    # 🔹 Powered by
     pdf.ln(6)
-    pdf.set_text_color(*CYAN)
-    pdf.set_font("Arial", 'I', 9)
-    pdf.cell(0, 6, "Powered by Neonflick-bps", align="C")
 
-    # 🔹 Зберігаємо PDF
+    # Legal section
+    pdf.set_text_color(*WHITE)
+    pdf.set_font("Helvetica", size=11)
+    pdf.multi_cell(
+        0,
+        7,
+        "This document is provided for informational purposes only and serves as a "
+        "record of a completed blockchain transaction. It does not constitute a "
+        "legal agreement, contract, or proof of consent between the parties."
+    )
+
+    pdf.ln(3)
+    pdf.set_font("Helvetica", style="I", size=10)
+    pdf.multi_cell(
+        0,
+        6,
+        "User acknowledgements and consent selections are collected separately via "
+        "the platform interface at the time of payment and may be stored in platform "
+        "systems for audit or compliance purposes."
+    )
+
+    pdf.ln(4)
+    pdf.set_font("Helvetica", size=10)
+    pdf.multi_cell(
+        0,
+        6,
+        "Cryptocurrency transactions are irreversible and may involve technical "
+        "or market risks. Users are responsible for reviewing all applicable "
+        "platform documentation prior to initiating a transaction."
+    )
+
+    # Footer
+    pdf.ln(8)
+    pdf.set_text_color(*CYAN)
+    pdf.set_font("Helvetica", style="I", size=9)
+    pdf.cell(
+        0,
+        6,
+        "Powered by Neonflick-bps - Blockchain transaction record",
+        align="C"
+    )
+
     pdf_buffer = io.BytesIO()
     pdf.output(pdf_buffer)
     pdf_buffer.seek(0)
 
     return send_file(
-    pdf_buffer,
-    as_attachment=True,
-    download_name="e-receipt.pdf",
-    mimetype="application/pdf"
-)
-
+        pdf_buffer,
+        as_attachment=True,
+        download_name="e-receipt.pdf",
+        mimetype="application/pdf"
+    )
 
 
 if __name__ == "__main__":

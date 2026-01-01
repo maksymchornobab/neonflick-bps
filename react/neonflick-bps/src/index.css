@@ -1397,7 +1397,7 @@ body {
 
 .tx-overlay {
   position: absolute;
-  top: 403px;
+  top: 424px;
   right: 18px;
   width: 242px;
   height: 126px;
@@ -1715,5 +1715,80 @@ body {
 .p-risks {
   text-decoration: underline;
   font-weight: bold;
+}
+
+/* Backdrop */
+.blocked-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem; /* щоб модалка не прилипала до країв на мобайлі */
+  overflow-y: auto; /* дозвіл скролу, якщо модалка занадто висока */
+}
+
+/* Modal box */
+.blocked-modal {
+  background: #0a0a0a;
+  border: 2px solid #00ffff;
+  border-radius: 12px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh; /* обмежує висоту модалки */
+  overflow-y: auto; /* додаємо прокрутку всередині модалки */
+  text-align: center;
+  box-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff inset;
+  animation: glow 1.5s infinite alternate;
+}
+
+/* Glow animation */
+@keyframes glow {
+  from {
+    box-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff inset;
+  }
+  to {
+    box-shadow: 0 0 30px #00ffff, 0 0 60px #00ffff inset;
+  }
+}
+
+/* Header */
+.blocked-modal h2 {
+  color: #00ffff;
+  font-family: "Courier New", Courier, monospace;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+}
+
+/* Text */
+.blocked-modal p {
+  color: #ffffff;
+  font-family: "Courier New", Courier, monospace;
+  margin-bottom: 1rem;
+  word-break: break-word; /* щоб довгі адреси гаманців переносились */
+}
+
+/* Button */
+.blocked-modal button {
+  background: transparent;
+  border: 2px solid #00ffff;
+  color: #00ffff;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: "Courier New", Courier, monospace;
+  transition: all 0.3s ease;
+}
+
+.blocked-modal button:hover {
+  background: #00ffff;
+  color: #0a0a0a;
+  box-shadow: 0 0 20px #00ffff;
 }
 

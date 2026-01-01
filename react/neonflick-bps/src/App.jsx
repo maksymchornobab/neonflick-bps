@@ -17,10 +17,11 @@ import WithdrawalInformation from "./legal/WithdrawalInformation"
 import PlatformDisclaimer from "./legal/PlatformDisclaimer"
 import CryptoRiskDisclosure from "./legal/CryptoRiskDisclosure"
 import AbusePreventionStatement from "./legal/AbusePreventionStatement"
+
 import "./index.css";
 
 export default function App() {
-  const { user, loading } = useWalletAuth();
+  const { user, loading, showBlockedModal, blockedWallet, closeBlockedModal } = useWalletAuth();
   const [activeSection, setActiveSection] = useState("products");
   const [editingProduct, setEditingProduct] = useState(null);
 
@@ -63,7 +64,20 @@ export default function App() {
 
   return (
     <BrowserRouter>
-    <CookieConsentBanner />
+      <CookieConsentBanner />
+      
+      {/* ❌ Blocked Wallet Modal */}
+      {showBlockedModal && (
+        <div className="blocked-modal-backdrop">
+          <div className="blocked-modal">
+            <h2>Wallet Blocked</h2>
+            <p>The wallet <b>{blockedWallet}</b> has been blocked.</p>
+            <p>Please connect a different wallet to continue.</p>
+            <button onClick={closeBlockedModal}>OK</button>
+          </div>
+        </div>
+      )}
+
       <Routes>
         {/* 💳 Public routes */}
         <Route path="/pay/:productId" element={<PaymentPage />} />

@@ -119,7 +119,7 @@ export default function EditSection({ product, onCancel }) {
       setLoading(false);
 
       if (!res.ok) {
-        setNotification(data.error || "Update failed");
+        setNotification(data.message || "Update failed");
         return;
       }
 

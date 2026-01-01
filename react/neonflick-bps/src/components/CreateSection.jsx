@@ -69,7 +69,7 @@ export default function CreateSection() {
       setProducts(data.products || []);
     } catch (err) {
       console.error(err);
-      setNotification("Failed to fetch products");
+      setNotification("Something went wrong");
     }
   };
 
@@ -202,7 +202,7 @@ export default function CreateSection() {
       setLoading(false);
 
       if (!res.ok) {
-        setNotification(data.error || "Error creating product");
+        setNotification(data.message || "Error creating product");
         return;
       }
 

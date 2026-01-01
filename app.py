@@ -130,6 +130,10 @@ def expired_products_checker():
 
         time.sleep(60)
 
+def is_wallet_blocked(wallet: str) -> bool:
+    return bool(blocked_users.find_one({"wallet": wallet}))
+
+
 
 # 🔹 Запуск фоновго потоку після створення Flask app
 threading.Thread(target=expired_products_checker, daemon=True).start()
@@ -140,20 +144,21 @@ threading.Thread(target=expired_products_checker, daemon=True).start()
 def root():
     return jsonify({"name": "Neonflick-bps", "status": "backend running"})
 
-
 @app.route("/auth/wallet", methods=["POST"])
 def auth_wallet():
-    data = request.json
+    data = request.json or {}
     wallet = data.get("wallet")
     consent = data.get("consent", False)
 
+    # 1️⃣ Валідація
     if not wallet or not isinstance(wallet, str):
         return jsonify({"error": "wallet must be string"}), 400
+
     if not isinstance(consent, bool):
         return jsonify({"error": "consent must be boolean"}), 400
 
-    # 🔒 BLOCKED WALLET CHECK (FIRST)
-    if blocked_users.find_one({"wallet": wallet}):
+    # 🔒 BLOCKED WALLET CHECK (FIRST & CENTRALIZED)
+    if is_wallet_blocked(wallet):
         return jsonify({
             "error": "wallet_blocked",
             "message": "This wallet address is blocked from using the platform."
@@ -164,6 +169,7 @@ def auth_wallet():
 
     consents = []
 
+    # 2️⃣ Новий користувач
     if not user:
         if consent:
             consents.append("crypto_risk_disclosure")
@@ -178,6 +184,8 @@ def auth_wallet():
             "consent_given_at": {c: now for c in consents}
         })
         status = "created"
+
+    # 3️⃣ Існуючий користувач
     else:
         update_fields = {"last_login": now}
         user_consents = user.get("consents", [])
@@ -193,6 +201,7 @@ def auth_wallet():
         users.update_one({"wallet": wallet}, {"$set": update_fields})
         status = "login"
 
+    # 4️⃣ JWT
     token = jwt.encode(
         {"wallet": wallet, "exp": now + timedelta(days=7)},
         app.config["SECRET_KEY"],
@@ -206,11 +215,7 @@ def auth_wallet():
         "status": status,
         "user": {"wallet": wallet},
         "token": token
-    })
-
-
-
-
+    }), 200
 
 @app.route("/auth/me", methods=["GET"])
 def auth_me():
@@ -223,8 +228,8 @@ def auth_me():
     if not wallet:
         return jsonify({"user": None}), 200
 
-    # 🔒 BLOCKED WALLET CHECK
-    if blocked_users.find_one({"wallet": wallet}):
+    # 🔒 BLOCKED WALLET CHECK (CENTRALIZED)
+    if is_wallet_blocked(wallet):
         return jsonify({"user": None}), 200
 
     user = users.find_one({"wallet": wallet})
@@ -237,8 +242,7 @@ def auth_me():
             "consents": user.get("consents", []),
             "consent_given_at": user.get("consent_given_at", {})
         }
-    })
-
+    }), 200
 
 @app.route("/auth/consent/check", methods=["POST"])
 def check_required_consents():
@@ -247,6 +251,13 @@ def check_required_consents():
 
     if not wallet or not isinstance(wallet, str):
         return jsonify({"error": "wallet must be string"}), 400
+
+    # 🔒 BLOCKED WALLET CHECK (CENTRALIZED)
+    if is_wallet_blocked(wallet):
+        return jsonify({
+            "error": "wallet_blocked",
+            "message": "This wallet address is blocked from using the platform."
+        }), 403
 
     user = users.find_one({"wallet": wallet})
     if not user:
@@ -257,7 +268,8 @@ def check_required_consents():
     return jsonify({
         "aml": "aml" in consents,
         "platform_disclaimer": "platform_disclaimer" in consents
-    })
+    }), 200
+
 
 @app.route("/auth/consent", methods=["POST"])
 def add_consent():
@@ -269,6 +281,13 @@ def add_consent():
         return jsonify({"error": "wallet must be string"}), 400
     if not consent or not isinstance(consent, str):
         return jsonify({"error": "consent must be string"}), 400
+
+    # 🔒 BLOCKED WALLET CHECK (CENTRALIZED)
+    if is_wallet_blocked(wallet):
+        return jsonify({
+            "error": "wallet_blocked",
+            "message": "This wallet address is blocked from using the platform."
+        }), 403
 
     now = datetime.utcnow()
 
@@ -283,9 +302,7 @@ def add_consent():
     if result.matched_count == 0:
         return jsonify({"error": "user not found"}), 404
 
-    return jsonify({"status": "ok"})
-
-
+    return jsonify({"status": "ok"}), 200
 
 # ---------- Роут створення продукту ----------
 @app.route("/create_product", methods=["POST"])
@@ -296,6 +313,15 @@ def create_product():
         return jsonify({"error": "unauthorized"}), 401
 
     wallet = payload.get("wallet")
+    if not wallet:
+        return jsonify({"error": "unauthorized"}), 401
+
+    # 🔒 BLOCKED WALLET CHECK (CENTRALIZED)
+    if is_wallet_blocked(wallet):
+        return jsonify({
+            "error": "wallet_blocked",
+            "message": "This wallet address is blocked from using the platform."
+        }), 403
 
     image = request.files.get("image")
     title = request.form.get("title")
@@ -368,7 +394,7 @@ def create_product():
         "description": description,
         "price": price,                 # ціна для покупця
         "commission": commission,        # комісія платформи
-        "final_price": final_price,      # ✅ сума після комісії (seller net)
+        "final_price": final_price,      # seller net
         "currency": currency,
         "stats": {
             "status": "new",
@@ -386,10 +412,11 @@ def create_product():
         "s3_key": file_key,
         "price": price,
         "commission": commission,
-        "final_price": final_price,      # ✅ віддаємо фронту
+        "final_price": final_price,
         "currency": currency,
         "expires_at": expires_at.isoformat()
-    })
+    }), 200
+
 
 
 # ---------- Роут для обчислення комісії на Sol ----------
@@ -434,6 +461,13 @@ def get_products():
     if not wallet:
         return jsonify({"products": []}), 200
 
+    # 🔒 BLOCKED WALLET CHECK (CENTRALIZED)
+    if is_wallet_blocked(wallet):
+        return jsonify({
+            "error": "wallet_blocked",
+            "message": "This wallet address is blocked from using the platform."
+        }), 403
+
     items = products.find(
         {"wallet": wallet}
     ).sort("created_at", -1)
@@ -474,9 +508,7 @@ def get_products():
             }
         })
 
-    return jsonify({"products": result})
-
-
+    return jsonify({"products": result}), 200
 
 @app.route("/delete-product", methods=["POST"])
 def delete_product():
@@ -507,6 +539,7 @@ def delete_product():
 
     return jsonify({"success": True})
 
+
 @app.route("/update_product", methods=["POST"])
 def update_product():
     data = request.form
@@ -515,23 +548,43 @@ def update_product():
     if not product_id:
         return jsonify({"error": "Product ID required"}), 400
 
-    product = products.find_one({"_id": ObjectId(product_id)})
+    # 🔹 Отримуємо продукт
+    try:
+        product = products.find_one({"_id": ObjectId(product_id)})
+    except Exception:
+        return jsonify({"error": "Invalid product ID"}), 400
+
     if not product:
         return jsonify({"error": "Product not found"}), 404
 
-    # Перевірка обов'язкових полів
+    # 🔒 BLOCKED WALLET CHECK (seller wallet from product)
+    wallet = product.get("wallet")
+    if not wallet:
+        return jsonify({"error": "Product wallet not found"}), 500
+
+    if is_wallet_blocked(wallet):
+        return jsonify({
+            "error": "wallet_blocked",
+            "message": "This wallet address is blocked from using the platform."
+        }), 403
+
+    # 🔹 Перевірка обов'язкових полів
     required_fields = ["title", "description", "price", "currency"]
     for field in required_fields:
         if field not in data:
             return jsonify({"error": f"{field} is required"}), 400
 
+    # 🔹 Валідація ціни
     try:
         price = float(data["price"])
+        if price <= 0:
+            raise ValueError()
     except ValueError:
         return jsonify({"error": "Invalid price"}), 400
 
     currency = data["currency"]
-    # 🔹 Розрахунок комісії тільки для SOL
+
+    # 🔹 Розрахунок комісії (тільки SOL)
     commission = None
     if currency.upper() == "SOL":
         try:
@@ -546,11 +599,13 @@ def update_product():
         "price": price,
         "currency": currency,
         "commission": commission,
+        "updated_at": datetime.utcnow(),
     }
 
     # 🔹 Обробка заміни картинки
     if "image" in request.files:
         old_image_url = data.get("old_image")
+
         if old_image_url:
             try:
                 old_key = "/".join(old_image_url.split("/")[-2:])
@@ -560,6 +615,7 @@ def update_product():
 
         file = request.files["image"]
         filename = f"products/{uuid.uuid4()}_{file.filename}"
+
         try:
             s3.upload_fileobj(
                 file,
@@ -567,14 +623,24 @@ def update_product():
                 filename,
                 ExtraArgs={"ContentType": file.content_type},
             )
-            update_data["image"] = f"https://{AWS_BUCKET}.s3.{AWS_REGION}.amazonaws.com/{filename}"
-        except Exception as e:
+            update_data["image"] = (
+                f"https://{AWS_BUCKET}.s3.{AWS_REGION}.amazonaws.com/{filename}"
+            )
+        except Exception:
             return jsonify({"error": "Failed to upload new image"}), 500
 
-    # 🔹 Оновлення продукту в базі
-    products.update_one({"_id": ObjectId(product_id)}, {"$set": update_data})
+    # 🔹 Оновлення продукту
+    products.update_one(
+        {"_id": ObjectId(product_id)},
+        {"$set": update_data}
+    )
 
-    return jsonify({"success": True, "commission": commission})
+    return jsonify({
+        "success": True,
+        "commission": commission
+    }), 200
+
+
 
 
 @app.route("/delete-products", methods=["POST"])
@@ -634,9 +700,19 @@ def get_payment_data(product_id):
 
     # 2️⃣ Отримання продукту
     product = products.find_one({"_id": product_oid})
-
     if not product:
         abort(404, description="Product not found")
+
+    # 🔒 BLOCKED WALLET CHECK (seller wallet from product)
+    wallet = product.get("wallet")
+    if not wallet:
+        abort(500, description="Product wallet not found")
+
+    if is_wallet_blocked(wallet):
+        return jsonify({
+            "error": "wallet_blocked",
+            "message": "This wallet address is blocked from using the platform."
+        }), 403
 
     # 3️⃣ Перевірка часу дії
     expires_at = product.get("expires_at")
@@ -648,24 +724,24 @@ def get_payment_data(product_id):
         expires_at = expires_at.replace(tzinfo=timezone.utc)
 
     now = datetime.now(timezone.utc)
-
     if now > expires_at:
         abort(410, description="Product expired")
 
     # 4️⃣ Формування payload (використовуємо тільки дані з БД)
     payment_payload = {
         "product_id": str(product["_id"]),
-        "sellerWallet": product["wallet"],
+        "sellerWallet": wallet,  # беремо з product
         "price": product["price"],
         "currency": product["currency"],
-        "commission": product.get("commission"),  # залишаємо для сумісності
+        "commission": product.get("commission"),
         "expires_at": expires_at.isoformat(),
         "title": product["title"],
         "image": product["image"],
-        "description": product.get("description"),  # 🔹 Додаємо description
+        "description": product.get("description"),
     }
 
     return jsonify(payment_payload), 200
+
 
 @app.route("/api/pay/prepare/sol", methods=["POST"])
 def prepare_sol_transaction():
@@ -676,6 +752,7 @@ def prepare_sol_transaction():
     if not product_id or not buyer_wallet:
         abort(400, description="Missing product_id or buyer_wallet")
 
+    # 1️⃣ Отримуємо продукт
     try:
         product = products.find_one({"_id": ObjectId(product_id)})
     except Exception:
@@ -684,28 +761,47 @@ def prepare_sol_transaction():
     if not product:
         abort(404, description="Product not found")
 
+    # 🔒 BLOCKED WALLET CHECK — SELLER
+    seller_wallet = product.get("wallet")
+    if not seller_wallet:
+        abort(500, description="Product wallet not found")
+
+    if is_wallet_blocked(seller_wallet):
+        return jsonify({
+            "error": "wallet_blocked",
+            "message": "Seller wallet is blocked from using the platform."
+        }), 403
+
+    # 2️⃣ Перевірка часу дії продукту
     expires_at = product.get("expires_at")
     if not expires_at:
         abort(500, description="Product expiration not set")
+
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
 
     now = datetime.now(timezone.utc)
     remaining_seconds = int((expires_at - now).total_seconds())
+
     if remaining_seconds <= 0:
         abort(410, description="Product expired")
+
     if remaining_seconds < 30:
         abort(409, description="Not enough time left to process transaction")
 
+    # 3️⃣ Розрахунок сум
     price = float(product["price"])
     commission = float(product.get("commission", 0))
     seller_amount = price - commission
+
     if seller_amount <= 0:
         abort(500, description="Invalid commission configuration")
 
+    # 4️⃣ Формування SOL transaction
     LAMPORTS = 1_000_000_000
+
     buyer = PublicKey(buyer_wallet)
-    seller = PublicKey(product["wallet"])
+    seller = PublicKey(seller_wallet)
     platform = PublicKey(PLATFORM_WALLET_SOL)
 
     client = Client(os.getenv("SOLANA_NETWORK"))
@@ -716,9 +812,17 @@ def prepare_sol_transaction():
         abort(500, description=f"Failed to fetch latest blockhash: {e}")
 
     transfers = []
+
     if commission > 0:
-        transfers.append({"to": str(platform), "lamports": int(commission * LAMPORTS)})
-    transfers.append({"to": str(seller), "lamports": int(seller_amount * LAMPORTS)})
+        transfers.append({
+            "to": str(platform),
+            "lamports": int(commission * LAMPORTS)
+        })
+
+    transfers.append({
+        "to": str(seller),
+        "lamports": int(seller_amount * LAMPORTS)
+    })
 
     return jsonify({
         "blockhash": blockhash,

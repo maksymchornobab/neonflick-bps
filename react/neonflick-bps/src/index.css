@@ -26,7 +26,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 40px;
+  padding: 20px 30px;
   z-index: 1000;
 }
 
@@ -802,23 +802,31 @@ body {
 
 .notification {
   position: fixed;
-  top: 90px;
-  left: 20px;
-  background: rgba(0, 255, 255, 0.1);
+  top: 80px; /* відступ від верху */
+  left: 40%; /* по горизонталі центр */
+  transform: translateX(-50%); /* зміщуємо на половину ширини для точного центру */
+  
+  background: rgb(0, 0, 0);
   border: 1px solid #00ffff;
   padding: 14px 20px;
   border-radius: 12px;
   color: #00ffff;
   font-weight: bold;
   font-size: 14px;
+  
   box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
+  
   display: flex;
-  flex-direction: column; /* змінили, щоб span був зверху, кнопка внизу */
+  flex-direction: column; /* span зверху, кнопка внизу */
   justify-content: space-between;
+  
   min-width: 250px;
+  max-width: 90vw; /* не виходить за межі екрана */
+  
   z-index: 9999;
   animation: fadeInOut 7s forwards;
 }
+
 
 .notification span {
   margin-bottom: 8px; /* відступ до кнопки */

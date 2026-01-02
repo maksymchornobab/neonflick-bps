@@ -171,10 +171,8 @@ def auth_wallet():
 
     # 2️⃣ Новий користувач
     if not user:
-        if consent:
-            consents.append("crypto_risk_disclosure")
 
-        consents.append("cookies")
+        consents.append("privacy_policy")
 
         users.insert_one({
             "wallet": wallet,
@@ -252,7 +250,7 @@ def check_required_consents():
     if not wallet or not isinstance(wallet, str):
         return jsonify({"error": "wallet must be string"}), 400
 
-    # 🔒 BLOCKED WALLET CHECK (CENTRALIZED)
+    # 🔒 BLOCKED WALLET CHECK
     if is_wallet_blocked(wallet):
         return jsonify({
             "error": "wallet_blocked",
@@ -266,9 +264,15 @@ def check_required_consents():
     consents = user.get("consents", [])
 
     return jsonify({
+        # 🔐 GLOBAL ACCESS
+        "terms": "terms" in consents,
+        "crypto_risk_disclosure": "crypto_risk_disclosure" in consents,
+
+        # 🔁 OTHER FLOWS
         "aml": "aml" in consents,
-        "platform_disclaimer": "platform_disclaimer" in consents
+        "platform_disclaimer": "platform_disclaimer" in consents,
     }), 200
+
 
 
 @app.route("/auth/consent", methods=["POST"])
@@ -282,11 +286,10 @@ def add_consent():
     if not consent or not isinstance(consent, str):
         return jsonify({"error": "consent must be string"}), 400
 
-    # 🔒 BLOCKED WALLET CHECK (CENTRALIZED)
     if is_wallet_blocked(wallet):
         return jsonify({
             "error": "wallet_blocked",
-            "message": "This wallet address is blocked from using the platform."
+            "message": "This wallet address is blocked."
         }), 403
 
     now = datetime.utcnow()
@@ -303,6 +306,7 @@ def add_consent():
         return jsonify({"error": "user not found"}), 404
 
     return jsonify({"status": "ok"}), 200
+
 
 # ---------- Роут створення продукту ----------
 @app.route("/create_product", methods=["POST"])

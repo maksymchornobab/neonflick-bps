@@ -1,37 +1,38 @@
 import { useEffect, useState } from "react";
 
 export default function Notification({ message, onClose }) {
-  const [visible, setVisible] = useState(true);
+  const [visible, setVisible] = useState(false);
+
+  const handleClose = () => {
+    setVisible(false);
+    if (onClose) onClose();
+  };
+
+  // 🔹 Показуємо сповіщення при зміні message
+  useEffect(() => {
+    if (!message) return;
+
+    setVisible(true); // показати
+
+    const timer = setTimeout(() => {
+      handleClose(); // через 7 секунд закриваємо так само, як на кнопку close
+    }, 7000);
+
+    return () => clearTimeout(timer); // очищаємо таймер при unmount / новому message
+  }, [message]);
+
+  if (!visible || !message) return null;
 
   // 🔹 Визначаємо текст для відображення
-  // Якщо message — об’єкт з полем message, беремо його
-  // Інакше просто рядок або серіалізуємо об’єкт у JSON
   const displayMessage =
     typeof message === "object" && message !== null
       ? message.message || JSON.stringify(message)
       : message;
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setVisible(false);
-      if (onClose) onClose();
-    }, 7000); // ⏱ 7 секунд
-
-    return () => clearTimeout(timer);
-  }, [onClose]);
-
-  if (!visible || !displayMessage) return null;
-
   return (
     <div className="notification">
       <span>{displayMessage}</span>
-      <button
-        className="close-btn"
-        onClick={() => {
-          setVisible(false);
-          if (onClose) onClose();
-        }}
-      >
+      <button className="close-btn" onClick={handleClose}>
         close
       </button>
     </div>

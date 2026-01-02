@@ -10,9 +10,13 @@ export function WalletAuthProvider({ children }) {
   const [connectedWallet, setConnectedWallet] = useState(null);
   const [pendingWallet, setPendingWallet] = useState(null);
 
-  // 🔒 Blocked wallet modal state
+  // 🔒 Blocked wallet modal
   const [blockedWallet, setBlockedWallet] = useState(null);
   const [showBlockedModal, setShowBlockedModal] = useState(false);
+
+  // 📜 Terms + Crypto Risk modal
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [consentWallet, setConsentWallet] = useState(null);
 
   // 🔁 Restore session
   useEffect(() => {
@@ -38,6 +42,38 @@ export function WalletAuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
+  /* 🔎 CHECK REQUIRED CONSENTS (TERMS + CRYPTO RISK ONLY) */
+  const checkAccessConsents = async (wallet, jwt) => {
+    try {
+      const res = await fetch(
+        "http://127.0.0.1:5000/auth/consent/check",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${jwt}`,
+          },
+          body: JSON.stringify({ wallet }),
+        }
+      );
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+
+      // ❗ тільки access-level consents
+      const hasTerms = data.terms === true;
+      const hasRisk = data.crypto_risk_disclosure === true;
+
+      if (!hasTerms || !hasRisk) {
+        setConsentWallet(wallet);
+        setShowConsentModal(true);
+      }
+    } catch (err) {
+      console.error("Consent check failed:", err);
+    }
+  };
+
   // 🔐 Login / Change wallet
   const loginWithWallet = async (publicKey) => {
     try {
@@ -50,7 +86,6 @@ export function WalletAuthProvider({ children }) {
       // 🚫 BLOCKED WALLET
       if (res.status === 403) {
         const data = await res.json();
-
         if (data?.error === "wallet_blocked") {
           setBlockedWallet(publicKey);
           setShowBlockedModal(true);
@@ -65,25 +100,24 @@ export function WalletAuthProvider({ children }) {
         setToken(data.token);
         setConnectedWallet(data.user.wallet);
         localStorage.setItem("jwt_token", data.token);
+
+        // 🔍 CHECK TERMS + CRYPTO RISK
+        await checkAccessConsents(data.user.wallet, data.token);
       }
     } catch (err) {
       console.error("Login failed:", err);
     }
   };
 
-  // 🚪 Logout
+  // 🚪 Logout (AUTH ONLY)
   const logout = async () => {
     setUser(null);
     setToken(null);
     setConnectedWallet(null);
     setPendingWallet(null);
+    setShowConsentModal(false);
+    setConsentWallet(null);
     localStorage.removeItem("jwt_token");
-
-    if (window.solana?.isPhantom) {
-      try {
-        await window.solana.disconnect();
-      } catch {}
-    }
   };
 
   // 🔁 Change wallet confirm
@@ -100,6 +134,17 @@ export function WalletAuthProvider({ children }) {
     setBlockedWallet(null);
   };
 
+  // ✅ Called when Terms + Risk accepted
+  const confirmAccessConsents = () => {
+    setShowConsentModal(false);
+    setConsentWallet(null);
+  };
+
+  // ❌ Reject Terms/Risk → full logout
+  const rejectAccessConsents = () => {
+    logout();
+  };
+
   return (
     <WalletAuthContext.Provider
       value={{
@@ -113,10 +158,16 @@ export function WalletAuthProvider({ children }) {
         logout,
         loading,
 
-        // 🔒 blocked wallet modal
+        // 🔒 blocked wallet
         showBlockedModal,
         blockedWallet,
         closeBlockedModal,
+
+        // 📜 terms + crypto risk
+        showConsentModal,
+        consentWallet,
+        confirmAccessConsents,
+        rejectAccessConsents,
       }}
     >
       {children}

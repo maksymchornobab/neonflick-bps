@@ -126,17 +126,7 @@ body {
 }
 
 .wallet-chip {
-  padding: 10px 18px;
-  border-radius: 14px;
-  border: 1px solid var(--neon);
-  color: var(--neon);
-  cursor: default;
-  letter-spacing: 1px;
-  background: rgba(0, 255, 255, 0.05);
-  box-shadow:
-    0 0 10px rgba(0, 255, 255, 0.25),
-    inset 0 0 10px rgba(0, 255, 255, 0.15);
-  transition: all 0.3s ease;
+  display: none;
 }
 
 .wallet-wrapper:hover .wallet-chip {
@@ -214,7 +204,6 @@ body {
 .create-form input,
 .create-form textarea,
 .create-form select {
-  width: 100%;
   padding: 14px 16px;
   border-radius: 14px;
   background: rgba(0, 255, 255, 0.05);
@@ -289,6 +278,13 @@ body {
   background-image: url("components/img/delete.png");
 }
 
+.create-title-input,
+.create-descr-textarea,
+.create-duration-select,
+.create-currency-select,
+.create-price-input {
+  width: 100%;
+}
 
 .price-row {
   width: 92%;
@@ -380,6 +376,92 @@ body {
 .commission-word {
   font-weight: bold;
   text-decoration: underline;
+}
+
+.warning-text {
+  color: red;
+  font-size: 20px;
+  font-weight: bold;
+  margin-top: 10px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.max-products-text {
+  color: red;
+  font-weight: bold;
+}
+
+.commission-text {
+  color: #00ffff;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.commission-table {
+  margin-bottom: 10px;
+}
+
+.final-price-text {
+  color: #00ff88;
+  font-weight: bold;
+}
+
+.consent-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  color: #00ffff;
+}
+
+.consent-checkbox {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.consent-link {
+  color: #00ffff;
+  text-decoration: underline;
+  margin: 0 2px;
+  font-weight: bold;
+}
+
+.attention-text {
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  color: #ff0000;
+}
+
+.wallet-warning {
+  color: #00ffff;
+  text-align: center;
+}
+
+.wallet-amount {
+  font-weight: bold;
+  text-decoration: underline;
+}
+
+.wallet-readmore {
+  text-decoration: underline;
+  color: #00ffff;
+  font-weight: bold;
+  margin-left: 4px;
+}
+
+.create-submit-btn {
+  background: #ff0044;
+  color: #fff;
+  font-weight: bold;
+  padding: 12px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
 }
 
 
@@ -613,6 +695,9 @@ body {
 }
 
 .three-dots {
+  display: none;
+  position: relative;
+  z-index: 1;
   width: 36px;            /* ширина круга */
   height: 36px;           /* висота круга */
   background: #111;

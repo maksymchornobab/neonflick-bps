@@ -10,27 +10,49 @@ import PaymentPage from "./components/PaymentPage";
 import CookieConsentBanner from "./components/CookieConsentBanner";
 
 import { useWalletAuth } from "./components/WalletAuthContext";
-import LegalNotice from "./legal/LegalNotice"; 
+
+import TermsConsentModal, { DeniedScreen } from "./components/TermsConsentModal";
+
+
+import LegalNotice from "./legal/LegalNotice";
 import PrivacyPolicy from "./legal/PrivacyPolicy";
-import TermsAndConditions from "./legal/TermsAndConditions"
-import WithdrawalInformation from "./legal/WithdrawalInformation"
-import PlatformDisclaimer from "./legal/PlatformDisclaimer"
-import CryptoRiskDisclosure from "./legal/CryptoRiskDisclosure"
-import AbusePreventionStatement from "./legal/AbusePreventionStatement"
-import PaymentInstruction from "./howto/PaymentInstruction"
+import TermsAndConditions from "./legal/TermsAndConditions";
+import WithdrawalInformation from "./legal/WithdrawalInformation";
+import PlatformDisclaimer from "./legal/PlatformDisclaimer";
+import CryptoRiskDisclosure from "./legal/CryptoRiskDisclosure";
+import AbusePreventionStatement from "./legal/AbusePreventionStatement";
+import PaymentInstruction from "./howto/PaymentInstruction";
 
 import "./index.css";
 
 export default function App() {
-  const { user, loading, showBlockedModal, blockedWallet, closeBlockedModal } = useWalletAuth();
+  const {
+    user,
+    token,
+    loading,
+
+    // 🔒 blocked wallet
+    showBlockedModal,
+    blockedWallet,
+    closeBlockedModal,
+
+    // 📜 access consents
+    showConsentModal,
+    consentWallet,
+    confirmAccessConsents,
+    rejectAccessConsents,
+  } = useWalletAuth();
+
   const [activeSection, setActiveSection] = useState("products");
   const [editingProduct, setEditingProduct] = useState(null);
+  const [consentDenied, setConsentDenied] = useState(false);
+
 
   if (loading) {
     return <main className="center">Loading...</main>;
   }
 
-  // Dashboard Wrapper Component
+  // 🧩 Dashboard Wrapper
   const Dashboard = () => (
     <>
       <Header
@@ -66,18 +88,44 @@ export default function App() {
   return (
     <BrowserRouter>
       <CookieConsentBanner />
-      
+
       {/* ❌ Blocked Wallet Modal */}
       {showBlockedModal && (
         <div className="blocked-modal-backdrop">
           <div className="blocked-modal">
             <h2>Wallet Blocked</h2>
-            <p>The wallet <b>{blockedWallet}</b> has been blocked.</p>
+            <p>
+              The wallet <b>{blockedWallet}</b> has been blocked.
+            </p>
             <p>Please connect a different wallet to continue.</p>
             <button onClick={closeBlockedModal}>OK</button>
           </div>
         </div>
       )}
+
+      {/* 📜 Terms + Crypto Risk Consent */}
+      {showConsentModal && (
+        <TermsConsentModal
+          wallet={consentWallet}
+          token={token}
+          onAgree={confirmAccessConsents}
+          onReject={rejectAccessConsents}
+        />
+      )}
+
+      {consentDenied ? (
+       <DeniedScreen />
+       ) : (
+       showConsentModal && (
+        <TermsConsentModal
+         wallet={consentWallet}
+         token={token}
+         onAgree={confirmAccessConsents}
+         onReject={() => setConsentDenied(true)}
+        />
+       )
+      )}
+
 
       <Routes>
         {/* 💳 Public routes */}
@@ -89,9 +137,12 @@ export default function App() {
         <Route path="/legal/disclaimer" element={<PlatformDisclaimer />} />
         <Route path="/legal/crypto-risks" element={<CryptoRiskDisclosure />} />
         <Route path="/legal/aml" element={<AbusePreventionStatement />} />
-        <Route path="/howto/payment-instruction" element={<PaymentInstruction />} />
+        <Route
+          path="/howto/payment-instruction"
+          element={<PaymentInstruction />}
+        />
 
-        {/* 🏠 Dashboard route */}
+        {/* 🏠 Dashboard */}
         <Route path="/*" element={<Dashboard />} />
       </Routes>
     </BrowserRouter>

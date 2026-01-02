@@ -63,138 +63,169 @@ export default function CreateSection() {
 
   /* ---------------- API ---------------- */
   const fetchProducts = async () => {
-    try {
-      const res = await fetch("http://127.0.0.1:5000/products", {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      const data = await res.json();
-      setProducts(data.products || []);
-    } catch (err) {
-      console.error(err);
-      setNotification("Something went wrong");
+  try {
+    const res = await fetch("http://127.0.0.1:5000/products", {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to load products.");
     }
-  };
 
-  const fetchMeAndConsents = async () => {
-    try {
-      setConsentsLoaded(false);
-      const meRes = await fetch("http://127.0.0.1:5000/auth/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!meRes.ok) return;
-      const meData = await meRes.json();
-      const userWallet = meData?.user?.wallet;
-      if (!userWallet) return;
-      setWallet(userWallet);
+    const data = await res.json();
+    setProducts(data.products || []);
+  } catch (err) {
+    console.error(err);
+    setNotification("Unable to load products. Please refresh the page.");
+  }
+};
 
-      const consentRes = await fetch("http://127.0.0.1:5000/auth/consent/check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wallet: userWallet }),
-      });
+const fetchMeAndConsents = async () => {
+  try {
+    setConsentsLoaded(false);
 
-      if (!consentRes.ok) return;
-      const data = await consentRes.json();
-      setAmlFromDB(Boolean(data.aml));
-      setDisclaimerFromDB(Boolean(data.platform_disclaimer));
-      setTermsConsent(Boolean(data.terms));
-      setRiskConsent(Boolean(data.crypto_risk_disclosure));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setConsentsLoaded(true);
+    const meRes = await fetch("http://127.0.0.1:5000/auth/me", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!meRes.ok) {
+      setNotification("Authentication failed. Please reconnect your wallet.");
+      return;
     }
-  };
 
-  const calculateCommission = async (priceValue) => {
-    try {
-      const res = await fetch(
-        `http://127.0.0.1:5000/calculate_commission_sol?price=${priceValue}`
-      );
-      const data = await res.json();
-      if (res.ok) {
-        setCommission(data.commission);
-        setFinalPrice(data.final_price);
-      } else {
-        setCommission(null);
-        setFinalPrice(null);
-      }
-    } catch (err) {
-      console.error(err);
+    const meData = await meRes.json();
+    const userWallet = meData?.user?.wallet;
+
+    if (!userWallet) {
+      setNotification("Wallet not found. Please reconnect.");
+      return;
+    }
+
+    setWallet(userWallet);
+
+    const consentRes = await fetch("http://127.0.0.1:5000/auth/consent/check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ wallet: userWallet }),
+    });
+
+    if (!consentRes.ok) {
+      setNotification("Failed to load consent status.");
+      return;
+    }
+
+    const data = await consentRes.json();
+    setAmlFromDB(Boolean(data.aml));
+    setDisclaimerFromDB(Boolean(data.platform_disclaimer));
+    setTermsConsent(Boolean(data.terms));
+    setRiskConsent(Boolean(data.crypto_risk_disclosure));
+  } catch (err) {
+    console.error(err);
+    setNotification("Unable to load user information.");
+  } finally {
+    setConsentsLoaded(true);
+  }
+};
+
+const calculateCommission = async (priceValue) => {
+  try {
+    if (!priceValue) {
       setCommission(null);
       setFinalPrice(null);
+      return;
     }
-  };
 
-  const submitConsent = async (consentName) => {
-    await fetch("http://127.0.0.1:5000/auth/consent", {
+    const res = await fetch(`http://127.0.0.1:5000/calculate_commission_sol?price=${priceValue}`);
+    if (!res.ok) {
+      throw new Error("Failed to calculate commission.");
+    }
+
+    const data = await res.json();
+    setCommission(data.commission);
+    setFinalPrice(data.final_price);
+  } catch (err) {
+    console.error(err);
+    setCommission(null);
+    setFinalPrice(null);
+    setNotification("Unable to calculate commission. Please check the price.");
+  }
+};
+
+const submitConsent = async (consentName) => {
+  try {
+    const res = await fetch("http://127.0.0.1:5000/auth/consent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ wallet, consent: consentName }),
     });
-  };
 
-  /* ---------------- HANDLERS ---------------- */
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setImage(file);
-    setImagePreview(URL.createObjectURL(file));
-  };
-
-  const handleRemoveImage = () => {
-    setImage(null);
-    setImagePreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const handleReplaceImage = () => fileInputRef.current?.click();
-
-  const handlePriceChange = (e) => {
-    let value = e.target.value;
-    if (!/^[0-9.]*$/.test(value)) return;
-    if ((value.match(/\./g) || []).length > 1) return;
-    const [int = "", dec = ""] = value.split(".");
-    if (int.length > 7 || dec.length > 3) return;
-    setPrice(value);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!token || !wallet) {
-      setNotification("Wallet not connected");
-      return;
+    if (!res.ok) {
+      throw new Error("Consent submission failed.");
     }
+  } catch (err) {
+    console.error(err);
+    setNotification("Failed to save consent. Please try again.");
+    throw err;
+  }
+};
 
-    if (needsConsent && !consentChecked) {
-      setNotification("You must accept AML Policy and Platform Disclaimer.");
-      return;
-    }
+/* ---------------- HANDLERS ---------------- */
+const handleImageChange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  setImage(file);
+  setImagePreview(URL.createObjectURL(file));
+};
 
-    if (maxProductsReached) {
-      setNotification("Operation canceled: Maximum of 10 products reached.");
-      return;
-    }
+const handleRemoveImage = () => {
+  setImage(null);
+  setImagePreview(null);
+  if (fileInputRef.current) fileInputRef.current.value = "";
+};
 
-    // 🔹 перевірка Terms + Crypto Risk Disclosure
-    if (!termsConsent || !riskConsent) {
-      setPendingSubmit({
-        image,
-        title,
-        description,
-        price,
-        currency,
-        duration,
-      });
-      setShowConsentModal(true);
-      return;
-    }
+const handleReplaceImage = () => fileInputRef.current?.click();
 
-    const numPrice = parseFloat(price);
-    if (!image || !title.trim() || !description.trim() || isNaN(numPrice) || !currency || !duration) {
-      setNotification("Please fill all required fields");
-      return;
-    }
+const handlePriceChange = (e) => {
+  let value = e.target.value;
+  if (!/^[0-9.]*$/.test(value)) return;
+  if ((value.match(/\./g) || []).length > 1) return;
+  const [int = "", dec = ""] = value.split(".");
+  if (int.length > 7 || dec.length > 3) return;
+  setPrice(value);
+};
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  if (!token || !wallet) {
+    setNotification("Wallet not connected. Please reconnect.");
+    return;
+  }
+
+  if (needsConsent && !consentChecked) {
+    setNotification("You must accept AML Policy and Platform Disclaimer.");
+    return;
+  }
+
+  if (maxProductsReached) {
+    setNotification("Operation canceled: Maximum of 10 products reached.");
+    return;
+  }
+
+  if (!termsConsent || !riskConsent) {
+    setPendingSubmit({ image, title, description, price, currency, duration });
+    setShowConsentModal(true);
+    return;
+  }
+
+  const numPrice = parseFloat(price);
+  if (!image || !title.trim() || !description.trim() || isNaN(numPrice) || !currency || !duration) {
+    setNotification("Please fill all required fields correctly.");
+    return;
+  }
+
+  try {
+    setLoading(true);
 
     if (!amlFromDB) await submitConsent("aml");
     if (!disclaimerFromDB) await submitConsent("platform_disclaimer");
@@ -207,66 +238,65 @@ export default function CreateSection() {
     formData.append("currency", currency);
     formData.append("duration", duration);
 
-    setLoading(true);
-    try {
-      const res = await fetch("http://127.0.0.1:5000/create_product", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      const data = await res.json();
-      setLoading(false);
+    const res = await fetch("http://127.0.0.1:5000/create_product", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
 
-      if (!res.ok) {
-        setNotification(data.message || "Error creating product");
-        return;
-      }
-
-      setNotification("Product created successfully!");
-      handleRemoveImage();
-      setTitle("");
-      setDescription("");
-      setPrice("");
-      setCurrency("");
-      setDuration("");
-      setCommission(null);
-      setFinalPrice(null);
-      setConsentChecked(false);
-      setPendingSubmit(null);
-
-      fetchProducts();
-      fetchMeAndConsents();
-    } catch (err) {
-      console.error(err);
-      setLoading(false);
-      setNotification("Network or server error");
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || "Error creating product.");
     }
-  };
 
-  // 🔹 Логіка для модалки
-  const handleConsentAgree = async () => {
-    try {
-      await submitConsent("terms");
-      await submitConsent("crypto_risk_disclosure");
-      setTermsConsent(true);
-      setRiskConsent(true);
-      setShowConsentModal(false);
+    // ✅ тільки успіх при створенні продукту
+    setNotification("Product created successfully!");
+    handleRemoveImage();
+    setTitle("");
+    setDescription("");
+    setPrice("");
+    setCurrency("");
+    setDuration("");
+    setCommission(null);
+    setFinalPrice(null);
+    setConsentChecked(false);
+    setPendingSubmit(null);
 
-      if (pendingSubmit) {
-        handleSubmit({ preventDefault: () => {} });
-      }
-    } catch (err) {
-      console.error(err);
-      setNotification("Failed to save consents.");
-    }
-  };
+    fetchProducts();
+    fetchMeAndConsents();
+  } catch (err) {
+    console.error(err);
+    setNotification(err.message || "Network or server error. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const handleConsentReject = () => {
+// 🔹 Логіка для модалки
+const handleConsentAgree = async () => {
+  try {
+    await submitConsent("terms");
+    await submitConsent("crypto_risk_disclosure");
+    setTermsConsent(true);
+    setRiskConsent(true);
     setShowConsentModal(false);
-    setNotification("Cannot create product without accepting Terms & Crypto Risk Disclosure.");
-  };
 
-  const needsConsent = consentsLoaded && (!amlFromDB || !disclaimerFromDB);
+    if (pendingSubmit) {
+      handleSubmit({ preventDefault: () => {} });
+    }
+  } catch (err) {
+    console.error(err);
+    setNotification("Failed to save consents.");
+  }
+};
+
+const handleConsentReject = () => {
+  setShowConsentModal(false);
+  setNotification("Cannot create product without accepting Terms & Crypto Risk Disclosure.");
+};
+
+const needsConsent = consentsLoaded && (!amlFromDB || !disclaimerFromDB);
+
 
   /* ---------------- RENDER ---------------- */
   return (
@@ -314,6 +344,24 @@ export default function CreateSection() {
         required
       />
       <span className="file-name">{image ? image.name : "Upload image"}</span>
+      {imagePreview && (
+    <>
+      <button
+        type="button"
+        className="img-btn remove"
+        onClick={handleRemoveImage}
+        title="Remove image"
+        disabled={maxProductsReached}
+      />
+      <button
+        type="button"
+        className="img-btn replace"
+        onClick={handleReplaceImage}
+        title="Replace image"
+        disabled={maxProductsReached}
+      />
+    </>
+  )}
     </label>
 
     <div className="input-wrapper input-title">
@@ -436,7 +484,7 @@ export default function CreateSection() {
     </p>
 
     <button
-  className="create-submit-btn"
+  className="create-submit-btn1"
   disabled={
     loading ||
     maxProductsReached ||
@@ -447,25 +495,6 @@ export default function CreateSection() {
 </button>
 
   </form>
-
-  {imagePreview && (
-    <>
-      <button
-        type="button"
-        className="img-btn remove"
-        onClick={handleRemoveImage}
-        title="Remove image"
-        disabled={maxProductsReached}
-      />
-      <button
-        type="button"
-        className="img-btn replace"
-        onClick={handleReplaceImage}
-        title="Replace image"
-        disabled={maxProductsReached}
-      />
-    </>
-  )}
 </section>
   );
 }

@@ -249,34 +249,32 @@ body {
 
 .img-btn {
   position: absolute;
-  top: 370px;
+  top: 50%;
+  transform: translateY(-50%); /* 🔑 вертикальний центр */
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  border: 1px dashed #00ffff;
+  border: 1px dashed var(--neon);
   cursor: pointer;
-
   background-color: rgba(0, 0, 0, 0.65);
   background-repeat: no-repeat;
   background-position: center;
   background-size: 100%;
-
   box-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .img-btn:hover {
-  transform: scale(1.1);
   box-shadow: 0 0 18px var(--neon);
 }
 
 .img-btn.replace {
-  right: 345px;
+  right: 52px; /* 👉 відступ від правого краю label */
   background-image: url("components/img/change.png");
 }
 
 .img-btn.remove {
-  right: 300px;
+  right: 8px;
   background-image: url("components/img/delete.png");
 }
 
@@ -294,31 +292,6 @@ body {
   width: 92%;
   display: flex;
   gap: 12px;
-}
-
-.create-form button {
-  margin-top: 10px;
-  margin-bottom: 10px;
-  padding: 14px;
-  border-radius: 16px;
-  background: var(--neon);
-  color: #000;
-  font-weight: bold;
-  cursor: pointer;
-  border: none;
-  box-shadow: 0 0 20px var(--neon);
-  transition: 0.3s;
-  width: 86%;
-}
-
-.create-form button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 0 30px var(--neon);
-}
-
-.create-form button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 .image-preview-wrapper {
@@ -468,6 +441,30 @@ body {
   cursor: pointer;
 }
 
+.create-submit-btn1 {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--neon);
+  color: #000;
+  font-weight: bold;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 20px var(--neon);
+  transition: 0.3s;
+  width: 86%;
+}
+
+.create-submit-btn1:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px var(--neon);
+}
+
+.create-submit-btn1:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
 #edit {
   position: relative;
@@ -496,6 +493,18 @@ body {
   white-space: nowrap;
   padding: 14px 20px;
   text-align: center;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--neon);
+  color: #000;
+  font-weight: bold;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 20px var(--neon);
+  transition: 0.3s;
+  width: 86%;
 }
 
 /* Warning text */
@@ -649,9 +658,6 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-
-
 
 /* FOOTER */
 .product-footer {
@@ -1423,7 +1429,7 @@ body {
     display: flex;
     align-items: center;
     font-family: 'DM Sans', 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
     height: 48px;
     line-height: 48px;
@@ -2171,7 +2177,7 @@ body {
   }
 
   .wallet-adapter-button {
-    width: 152px;
+    width: 116px;
   }
 
   .choose-section button {
@@ -2188,23 +2194,6 @@ body {
 
   .notification {
     left: 20%;
-  }
-
-  .file-input {
-    width: 80%;
-    margin-right: 80px;
-  }
-
-  .img-btn {
-    top: 370px;
-  }
-
-  .img-btn.replace {
-    right: 50px;
-  }
-
-  .img-btn.remove {
-    right: 10px;
   }
 
   .create-title-input,

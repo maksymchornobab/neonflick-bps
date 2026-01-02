@@ -273,8 +273,6 @@ def check_required_consents():
         "platform_disclaimer": "platform_disclaimer" in consents,
     }), 200
 
-
-
 @app.route("/auth/consent", methods=["POST"])
 def add_consent():
     data = request.json
@@ -420,8 +418,6 @@ def create_product():
         "currency": currency,
         "expires_at": expires_at.isoformat()
     }), 200
-
-
 
 # ---------- Роут для обчислення комісії на Sol ----------
 @app.route("/calculate_commission_sol", methods=["GET"])

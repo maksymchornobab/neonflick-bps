@@ -20,7 +20,7 @@ export default function TermsAndConditions() {
 
       <main className="legal-page">
         <h1>Terms & Conditions</h1>
-        <p className="legal-updated">Last updated: 29 December 2025</p>
+        <p className="legal-updated">Last updated: 3 January 2026</p>
 
         <section className="legal-section">
           <h2>1. Scope of Application</h2>
@@ -105,9 +105,24 @@ export default function TermsAndConditions() {
         <section className="legal-section">
           <h2>6. Fees</h2>
           <p>
-            The Neonflick-bps charges a service fee for providing technical infrastructure.
-            All applicable fees are transparently displayed before product creation and
-            before transaction execution.
+            The Neonflick-bps charges a service fee solely for providing technical 
+            infrastructure and marketplace functionality.
+          </p>
+          <p>
+            Neonflick-bps does not provide payment services, does not act as a 
+            financial intermediary, and does not take custody of user funds.
+          </p>
+          <p>
+            All payments are executed directly on the Solana blockchain between 
+            users via decentralized smart contracts.
+          </p>
+          <p>
+            Applicable fees are clearly disclosed prior to product creation and 
+            prior to transaction execution.
+          </p>
+          <p>
+            Neonflick-bps is not responsible for blockchain network performance, 
+            transaction finality, or transaction fees imposed by the Solana network.
           </p>
         </section>
 

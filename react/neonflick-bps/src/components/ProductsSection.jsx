@@ -34,148 +34,147 @@ export default function ProductsSection({ onEdit }) {
   }, [connectedWallet]);
 
   const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("jwt_token");
-      const res = await fetch("http://127.0.0.1:5000/products", {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      const data = await res.json();
-      setProducts(data.products || []);
-    } catch (err) {
-      console.error(err);
-      setNotification("Failed to fetch products");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /* ================= TIMERS ================= */
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const updated = {};
-      products.forEach((p) => {
-        if (p.expires_at) {
-          const remaining = new Date(p.expires_at).getTime() - now;
-          updated[p.id] = remaining > 0 ? remaining : 0;
-        }
-      });
-      setTimers(updated);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [products]);
-
-  /* ================= HELPERS ================= */
-  const toggleMenu = (id) => setOpenMenuId(openMenuId === id ? null : id);
-  const toggleInfo = (id) => setOpenInfoId(openInfoId === id ? null : id);
-
-  const toggleProductSelection = (id) => {
-    setSelectedProducts((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedProducts.length === products.length) {
-      setSelectedProducts([]);
-    } else {
-      setSelectedProducts(products.map((p) => p.id));
-    }
-  };
-
-  const formatTime = (ms) => {
-    if (ms <= 0) return "Expired";
-    const total = Math.floor(ms / 1000);
-    const h = Math.floor(total / 3600);
-    const m = Math.floor((total % 3600) / 60);
-    const s = total % 60;
-    return `${h}h ${m}m ${s}s`;
-  };
-
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setNotification("");
-      setTimeout(() => {
-        setNotification(`Tx copied: ${text.slice(0, 6)}...${text.slice(-4)}`);
-      }, 10);
+  setLoading(true);
+  try {
+    const token = localStorage.getItem("jwt_token");
+    const res = await fetch("http://127.0.0.1:5000/products", {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
-  };
 
-  /* ================= ACTIONS ================= */
-  const handleEdit = (product) => onEdit(product);
-  const handleShare = (product) => {
-  const url = `http://localhost:3000/pay/${product.id}`; // формуємо посилання
-  navigator.clipboard.writeText(url) // копіюємо у буфер
-    .then(() => {
-      setNotification(`Link copied!`); // показуємо повідомлення
-    })
-    .catch((err) => {
-      console.error("Failed to copy link:", err);
-      setNotification("Failed to copy link");
-    });
+    if (!res.ok) {
+      throw new Error("Failed to fetch products");
+    }
+
+    const data = await res.json();
+    setProducts(data.products || []);
+  } catch (err) {
+    console.error(err);
+    setNotification(err.message || "Failed to fetch products");
+  } finally {
+    setLoading(false);
+  }
 };
 
-
-  const handleDelete = async (ids) => {
-    const productIds = Array.isArray(ids) ? ids : [ids];
-    try {
-      const res = await fetch("http://127.0.0.1:5000/delete-products", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: productIds }),
-      });
-      const data = await res.json();
-
-      if (data.deleted?.length) {
-        setProducts((prev) =>
-          prev.filter((p) => !data.deleted.includes(p.id))
-        );
-        setSelectedProducts((prev) =>
-          prev.filter((id) => !data.deleted.includes(id))
-        );
-        setNotification(`${data.deleted.length} product(s) deleted`);
+/* ================= TIMERS ================= */
+useEffect(() => {
+  const interval = setInterval(() => {
+    const now = Date.now();
+    const updated = {};
+    products.forEach((p) => {
+      if (p.expires_at) {
+        const remaining = new Date(p.expires_at).getTime() - now;
+        updated[p.id] = remaining > 0 ? remaining : 0;
       }
+    });
+    setTimers(updated);
+  }, 1000);
+  return () => clearInterval(interval);
+}, [products]);
 
-      if (data.errors?.length) {
-        setNotification("Some products could not be deleted");
-      }
-    } catch (err) {
-      console.error(err);
-      setNotification("Delete failed: " + err.message);
-    }
-  };
+/* ================= HELPERS ================= */
+const toggleMenu = (id) => setOpenMenuId(openMenuId === id ? null : id);
+const toggleInfo = (id) => setOpenInfoId(openInfoId === id ? null : id);
 
-  const showDeleteOverlay = (id) => {
-    setDeleteOverlayIds((prev) => [...prev, id]);
-  };
+const toggleProductSelection = (id) => {
+  setSelectedProducts((prev) =>
+    prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+  );
+};
 
-  const hideDeleteOverlay = (id) => {
-    setDeleteOverlayIds((prev) => prev.filter((x) => x !== id));
-  };
+const toggleSelectAll = () => {
+  if (selectedProducts.length === products.length) {
+    setSelectedProducts([]);
+  } else {
+    setSelectedProducts(products.map((p) => p.id));
+  }
+};
 
-  const confirmDelete = (id) => {
-    handleDelete(id);
-    hideDeleteOverlay(id);
-  };
+const formatTime = (ms) => {
+  if (ms <= 0) return "Expired";
+  const total = Math.floor(ms / 1000);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return `${h}h ${m}m ${s}s`;
+};
 
-  /* ================= FILTER + SORT ================= */
-  const displayedProducts = [...products]
-    .filter((p) =>
-      p.title.toLowerCase().includes(searchQuery.trim().toLowerCase())
-    )
-    .sort((a, b) => {
-      if (sortBy === "price") {
-        return sortOrder === "asc" ? a.price - b.price : b.price - a.price;
-      }
-      const da = new Date(a.created_at);
-      const db = new Date(b.created_at);
-      return sortOrder === "asc" ? da - db : db - da;
+const copyToClipboard = (text) => {
+  navigator.clipboard.writeText(text).catch((err) => {
+    console.error("Failed to copy:", err);
+    setNotification("Failed to copy text");
+  });
+};
+
+/* ================= ACTIONS ================= */
+const handleEdit = (product) => onEdit(product);
+
+const handleShare = (product) => {
+  const url = `http://localhost:3000/pay/${product.id}`;
+  navigator.clipboard.writeText(url).catch((err) => {
+    console.error("Failed to copy link:", err);
+    setNotification("Failed to copy link");
+  });
+};
+
+const handleDelete = async (ids) => {
+  const productIds = Array.isArray(ids) ? ids : [ids];
+  try {
+    const res = await fetch("http://127.0.0.1:5000/delete-products", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: productIds }),
     });
 
-  /* ================= RENDER ================= */
-  if (loading) return <p className="products-loading">Loading products...</p>;
-  if (!products.length) return <p className="products-empty">No products yet</p>;
+    const data = await res.json();
+
+    if (data.errors?.length) {
+      setNotification("Some products could not be deleted");
+    }
+
+    // якщо видалились продукти — просто оновлюємо стан без сповіщення
+    if (data.deleted?.length) {
+      setProducts((prev) => prev.filter((p) => !data.deleted.includes(p.id)));
+      setSelectedProducts((prev) =>
+        prev.filter((id) => !data.deleted.includes(id))
+      );
+    }
+  } catch (err) {
+    console.error(err);
+    setNotification("Delete failed: " + (err.message || ""));
+  }
+};
+
+const showDeleteOverlay = (id) => {
+  setDeleteOverlayIds((prev) => [...prev, id]);
+};
+
+const hideDeleteOverlay = (id) => {
+  setDeleteOverlayIds((prev) => prev.filter((x) => x !== id));
+};
+
+const confirmDelete = (id) => {
+  handleDelete(id);
+  hideDeleteOverlay(id);
+};
+
+/* ================= FILTER + SORT ================= */
+const displayedProducts = [...products]
+  .filter((p) =>
+    p.title.toLowerCase().includes(searchQuery.trim().toLowerCase())
+  )
+  .sort((a, b) => {
+    if (sortBy === "price") {
+      return sortOrder === "asc" ? a.price - b.price : b.price - a.price;
+    }
+    const da = new Date(a.created_at);
+    const db = new Date(b.created_at);
+    return sortOrder === "asc" ? da - db : db - da;
+  });
+
+/* ================= RENDER ================= */
+if (loading) return <p className="products-loading">Loading products...</p>;
+if (!products.length) return <p className="products-empty">No products yet</p>;
+
 
   return (
   <section id="products" className="section">

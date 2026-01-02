@@ -39,97 +39,121 @@ export default function EditSection({ product, onCancel }) {
     }
   }, [price, currency]);
 
-  const calculateCommission = async (priceValue) => {
-    try {
-      const res = await fetch(
-        `http://127.0.0.1:5000/calculate_commission_sol?price=${priceValue}`
-      );
-      const data = await res.json();
-
-      if (res.ok) {
-        setCommission(data.commission);
-        setFinalPrice(data.final_price); // ✅
-      } else {
-        setCommission(null);
-        setFinalPrice(null);
-      }
-    } catch (err) {
-      console.error(err);
+const calculateCommission = async (priceValue) => {
+  try {
+    if (!priceValue) {
       setCommission(null);
       setFinalPrice(null);
-    }
-  };
-
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setImage(file);
-    setImagePreview(URL.createObjectURL(file));
-  };
-
-  const handleRemoveImage = () => {
-    setImage(null);
-    setImagePreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const handleReplaceImage = () => fileInputRef.current?.click();
-
-  const handlePriceChange = (e) => {
-    let value = e.target.value;
-    if (!/^[0-9.]*$/.test(value)) return;
-    if ((value.match(/\./g) || []).length > 1) return;
-
-    const [int = "", dec = ""] = value.split(".");
-    if (int.length > 7 || dec.length > 3) return;
-
-    setPrice(value);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    const numPrice = parseFloat(price);
-    if (!title.trim() || !description.trim() || isNaN(numPrice) || !currency) {
-      setNotification("Please fill all required fields");
       return;
     }
 
-    const formData = new FormData();
-    formData.append("id", product.id);
-    formData.append("title", title);
-    formData.append("description", description);
-    formData.append("price", numPrice.toFixed(3));
-    formData.append("currency", currency);
+    const res = await fetch(
+      `http://127.0.0.1:5000/calculate_commission_sol?price=${priceValue}`
+    );
 
-    if (image) {
-      formData.append("image", image);
-      formData.append("old_image", product.image);
+    if (!res.ok) {
+      throw new Error("Failed to calculate commission. Please check the price.");
     }
 
-    setLoading(true);
-    try {
-      const res = await fetch("http://127.0.0.1:5000/update_product", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
+    const data = await res.json();
+    setCommission(data.commission);
+    setFinalPrice(data.final_price); // ✅ only set values, no success notification
+  } catch (err) {
+    console.error(err);
+    setCommission(null);
+    setFinalPrice(null);
+    setNotification(err.message || "Unable to calculate commission.");
+  }
+};
 
-      const data = await res.json();
-      setLoading(false);
+const handleImageChange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  setImage(file);
+  setImagePreview(URL.createObjectURL(file));
+};
 
-      if (!res.ok) {
-        setNotification(data.message || "Update failed");
-        return;
-      }
+const handleRemoveImage = () => {
+  setImage(null);
+  setImagePreview(null);
+  if (fileInputRef.current) fileInputRef.current.value = "";
+};
 
-      setNotification("Product updated successfully!");
-      onCancel();
-    } catch (err) {
-      setLoading(false);
-      setNotification("Error updating product");
+const handleReplaceImage = () => fileInputRef.current?.click();
+
+const handlePriceChange = (e) => {
+  let value = e.target.value;
+  if (!/^[0-9.]*$/.test(value)) return;
+  if ((value.match(/\./g) || []).length > 1) return;
+
+  const [int = "", dec = ""] = value.split(".");
+  if (int.length > 7 || dec.length > 3) return;
+
+  setPrice(value);
+};
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  // ---------- VALIDATION ----------
+  const numPrice = parseFloat(price);
+
+  if (!title.trim() || !description.trim() || isNaN(numPrice) || !currency) {
+    setNotification("Please fill all required fields correctly.");
+    return;
+  }
+
+  if (!product?.id) {
+    setNotification("Product data not loaded. Please refresh the page.");
+    return;
+  }
+
+  // ---------- BUILD FORM DATA ----------
+  const formData = new FormData();
+  formData.append("id", product.id);
+  formData.append("title", title.trim());
+  formData.append("description", description.trim());
+  formData.append("price", numPrice.toFixed(3));
+  formData.append("currency", currency);
+
+  if (image) {
+    formData.append("image", image);
+    formData.append("old_image", product.image || "");
+  }
+
+  setLoading(true);
+
+  // ---------- SEND REQUEST ----------
+  try {
+    const res = await fetch("http://127.0.0.1:5000/update_product", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || "Product update failed.");
     }
-  };
+
+    // ---------- SUCCESS ----------
+    setNotification("Product updated successfully!");
+    onCancel(); // close modal / reset form
+
+  } catch (err) {
+    console.error(err);
+
+    // ---------- ERROR HANDLING ----------
+    if (err.name === "TypeError") {
+      setNotification("Network error. Please check your connection and try again.");
+    } else {
+      setNotification(err.message || "Error updating product. Please try again.");
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <section id="edit" className="section">
@@ -160,6 +184,22 @@ export default function EditSection({ product, onCancel }) {
         onChange={handleImageChange}
       />
       <span className="file-name">{image ? image.name : "Upload image"}</span>
+      {imagePreview && (
+    <>
+      <button
+        type="button"
+        className="img-btn remove"
+        onClick={handleRemoveImage}
+        title="Remove image"
+      />
+      <button
+        type="button"
+        className="img-btn replace"
+        onClick={handleReplaceImage}
+        title="Replace image"
+      />
+    </>
+  )}
     </label>
 
     <div className="input-wrapper">
@@ -251,23 +291,6 @@ export default function EditSection({ product, onCancel }) {
       </button>
     </div>
   </form>
-
-  {imagePreview && (
-    <>
-      <button
-        type="button"
-        className="img-btn remove"
-        onClick={handleRemoveImage}
-        title="Remove image"
-      />
-      <button
-        type="button"
-        className="img-btn replace"
-        onClick={handleReplaceImage}
-        title="Replace image"
-      />
-    </>
-  )}
 </section>
 
   );

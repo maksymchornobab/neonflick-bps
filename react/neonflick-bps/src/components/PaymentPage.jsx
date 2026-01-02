@@ -68,21 +68,28 @@ function PaymentPage() {
   // 🔹 Fetch product
   useEffect(() => {
     const fetchPaymentData = async () => {
-      try {
-        const res = await fetch(`http://127.0.0.1:5000/api/pay/${productId}`);
-        if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
-        setProduct({ ...data, _id: data.product_id });
+  try {
+    const res = await fetch(`http://127.0.0.1:5000/api/pay/${productId}`);
 
-        const expires = new Date(data.expires_at).getTime();
-        setTimer(Math.max(expires - Date.now(), 0));
-      } catch (err) {
-        console.error(err);
-        setError("Product is unavailable or expired");
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!res.ok) {
+      // 🔹 замість HTML показуємо тільки просте повідомлення
+      setError("Product is unavailable or expired");
+      return;
+    }
+
+    const data = await res.json();
+    setProduct({ ...data, _id: data.product_id });
+
+    const expires = new Date(data.expires_at).getTime();
+    setTimer(Math.max(expires - Date.now(), 0));
+  } catch (err) {
+    console.error(err);
+    setError("Product is unavailable or expired");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
     fetchPaymentData();
   }, [productId]);
@@ -104,83 +111,160 @@ function PaymentPage() {
 
   // 🔹 PAY
   const handlePay = async () => {
-    if (!product?._id) return setNotification("Product not loaded");
-    if (!publicKey || !signTransaction) return setNotification("Connect wallet first");
-    if (!consentChecked) return setNotification("You must accept all consents");
+  // ---------- PRE-CHECKS ----------
+  if (!product?._id) {
+    setNotification("Product data not loaded. Please refresh the page.");
+    return;
+  }
+
+  if (!publicKey || !signTransaction) {
+    setNotification("Please connect your wallet to continue.");
+    return;
+  }
+
+  if (!consentChecked) {
+    setNotification("You must accept the Terms and required consents to proceed.");
+    return;
+  }
+
+  try {
+    setPaying(true);
+    setTxHash("");
+    setNotification("Preparing transaction. Please wait…");
+
+    // ---------- PREPARE TRANSACTION (BACKEND) ----------
+    const res = await fetch("http://127.0.0.1:5000/api/pay/prepare/sol", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        product_id: product._id,
+        buyer_wallet: publicKey.toString(),
+      }),
+    });
+
+    if (!res.ok) {
+      let msg = "Unable to prepare the transaction. Please try again later.";
+      const contentType = res.headers.get("Content-Type");
+      if (contentType?.includes("application/json")) {
+        const data = await res.json().catch(() => null);
+        if (data?.message) msg = data.message;
+      } else {
+        const text = await res.text().catch(() => "");
+        if (text) {
+          // Витягуємо текст без HTML тегів
+          msg = text.replace(/<\/?[^>]+(>|$)/g, "").trim();
+        }
+      }
+      throw new Error(msg);
+    }
+
+    const { blockhash, transfers } = await res.json();
+
+    if (!transfers || transfers.length === 0) {
+      throw new Error("Payment configuration error. Please contact support.");
+    }
+
+    // ---------- BUILD TRANSACTION ----------
+    const tx = new Transaction({
+      recentBlockhash: blockhash,
+      feePayer: publicKey,
+    });
+
+    let totalLamports = 0;
+
+    transfers.forEach((t) => {
+      if (t.to && t.lamports > 0) {
+        totalLamports += t.lamports;
+        tx.add(
+          SystemProgram.transfer({
+            fromPubkey: publicKey,
+            toPubkey: new PublicKey(t.to),
+            lamports: t.lamports,
+          })
+        );
+      }
+    });
+
+    if (totalLamports <= 0) {
+      throw new Error("Invalid payment amount. Please refresh the page and try again.");
+    }
+
+    // ---------- WALLET SIGN ----------
+    setNotification("Transaction prepared. Please confirm it in your wallet…");
+
+    let signedTx;
+    try {
+      signedTx = await signTransaction(tx);
+    } catch (e) {
+      throw new Error("Transaction was rejected in your wallet.");
+    }
+
+    // ---------- SEND TO BLOCKCHAIN ----------
+    let signature;
+    try {
+      signature = await connection.sendRawTransaction(signedTx.serialize());
+    } catch (e) {
+      throw new Error("Failed to send transaction to the network. Please try again.");
+    }
 
     try {
-      setPaying(true);
-      setNotification("Preparing transaction…");
-      setTxHash("");
+      await connection.confirmTransaction(signature, "confirmed");
+    } catch (e) {
+      throw new Error("Transaction was sent, but confirmation failed. Please check your wallet.");
+    }
 
-      const res = await fetch("http://127.0.0.1:5000/api/pay/prepare/sol", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          product_id: product._id,
-          buyer_wallet: publicKey.toString(),
-        }),
-      });
+    // ---------- SEND TX + CONSENTS TO BACKEND ----------
+    setNotification("Finalizing payment…");
 
-      if (!res.ok) throw new Error(await res.text());
-      const { blockhash, transfers } = await res.json();
+    const consentNames = [
+      "terms",
+      "privacy",
+      "withdrawal",
+      "platform_disclaimer",
+      "aml",
+      "crypto_risk_disclosure",
+    ];
 
-      const tx = new Transaction({ recentBlockhash: blockhash, feePayer: publicKey });
-      let totalLamports = 0;
-      transfers.forEach(t => {
-        if (t.to && t.lamports > 0) {
-          totalLamports += t.lamports;
-          tx.add(
-            SystemProgram.transfer({
-              fromPubkey: publicKey,
-              toPubkey: new PublicKey(t.to),
-              lamports: t.lamports,
-            })
-          );
-        }
-      });
+    const now = new Date().toISOString();
+    const timestamps = consentNames.map(() => now);
 
-      setNotification("Waiting for wallet confirmation…");
-      const signedTx = await signTransaction(tx);
-      const signature = await connection.sendRawTransaction(signedTx.serialize());
-      await connection.confirmTransaction(signature);
-
-      // 🔹 Build consent payload
-      const consentNames = [
-        "terms",
-        "privacy",
-        "withdrawal",
-        "platform_disclaimer",
-        "aml",
-        "crypto_risk_disclosure"
-      ];
-      const timestamps = {};
-      const now = new Date().toISOString();
-      consentNames.forEach(name => {
-        timestamps[name] = now;
-      });
-
-      // ✅ Send transaction + consents to backend
-      await fetch(`http://127.0.0.1:5000/api/products/${product._id}/transaction`, {
+    const backendRes = await fetch(
+      `http://127.0.0.1:5000/api/products/${product._id}/transaction`,
+      {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tx_hash: signature,
           consents: consentNames,
-          timestamps: Object.values(timestamps),
+          timestamps,
         }),
-      });
+      }
+    );
 
-      setTxHash(signature);
-      setShowSuccess(true);
+    if (!backendRes.ok) {
+      setNotification(
+        "Payment completed on the blockchain, but platform confirmation failed. Please contact support with your transaction hash."
+      );
+    } else {
       setNotification("");
-    } catch (err) {
-      console.error(err);
-      setNotification(err.message || "Payment failed");
-    } finally {
-      setPaying(false);
     }
-  };
+
+    // ---------- SUCCESS ----------
+    setTxHash(signature);
+    setShowSuccess(true);
+
+  } catch (err) {
+    console.error(err);
+    // Повідомлення без HTML
+    let cleanMsg = (err.message || "").replace(/<\/?[^>]+(>|$)/g, "").trim();
+    if (!cleanMsg) cleanMsg = "Payment failed due to an unexpected error. Please try again.";
+    setNotification(cleanMsg);
+  } finally {
+    setPaying(false);
+  }
+};
+
+
 
   if (loading) return <div className="payment-page__loading">Loading…</div>;
   if (error) return <div className="payment-page__error">{error}</div>;

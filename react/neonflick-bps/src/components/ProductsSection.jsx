@@ -178,253 +178,265 @@ export default function ProductsSection({ onEdit }) {
   if (!products.length) return <p className="products-empty">No products yet</p>;
 
   return (
-    <section id="products" className="section">
-      {notification && (
-        <Notification
-          message={notification}
-          onClose={() => setNotification("")}
-        />
-      )}
+  <section id="products" className="section">
+    {notification && (
+      <Notification
+        message={notification}
+        onClose={() => setNotification("")}
+      />
+    )}
 
-      <h2 className="products-title">PRODUCTS ({products.length}/10)</h2>
+    <h2 className="products-title">PRODUCTS ({products.length}/10)</h2>
 
-      <div className="products-panel">
-        <div className="choose-section">
-          <button onClick={() => setChooseMode(!chooseMode)}>
-            {chooseMode ? "Cancel Choose" : "Choose"}
-          </button>
-          {chooseMode && (
+    <div className="products-panel">
+
+      <div className="sort-section">
+        <label>
+          Sort by:
+          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+            <option value="date">Date</option>
+            <option value="price">Price</option>
+          </select>
+        </label>
+        <select
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value)}
+        >
+          {sortBy === "date" ? (
             <>
-              <button onClick={toggleSelectAll}>
-                {selectedProducts.length === products.length
-                  ? "Unselect All"
-                  : "Choose All"}
-              </button>
-              <button
-                disabled={!selectedProducts.length}
-                onClick={() => selectedProducts.forEach((id) => showDeleteOverlay(id))}
-              >
-                Delete
-              </button>
+              <option value="asc">Oldest → Newest</option>
+              <option value="desc">Newest → Oldest</option>
+            </>
+          ) : (
+            <>
+              <option value="asc">Lowest → Highest</option>
+              <option value="desc">Highest → Lowest</option>
             </>
           )}
-        </div>
-
-        <div className="sort-section">
-          <label>
-            Sort by:
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-              <option value="date">Date</option>
-              <option value="price">Price</option>
-            </select>
-          </label>
-          <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
-            {sortBy === "date" ? (
-              <>
-                <option value="asc">Oldest → Newest</option>
-                <option value="desc">Newest → Oldest</option>
-              </>
-            ) : (
-              <>
-                <option value="asc">Lowest → Highest</option>
-                <option value="desc">Highest → Lowest</option>
-              </>
-            )}
-          </select>
-        </div>
-
-        <div className="search-section">
-          <input
-            placeholder="Search by title..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+        </select>
+      </div>
+      
+      <div className="choose-section">
+        <button onClick={() => setChooseMode(!chooseMode)}>
+          {chooseMode ? "Cancel Choose" : "Choose"}
+        </button>
+        {chooseMode && (
+          <>
+            <button onClick={toggleSelectAll}>
+              {selectedProducts.length === products.length
+                ? "Unselect All"
+                : "Choose All"}
+            </button>
+            <button
+              disabled={!selectedProducts.length}
+              onClick={() =>
+                selectedProducts.forEach((id) => showDeleteOverlay(id))
+              }
+            >
+              Delete
+            </button>
+          </>
+        )}
       </div>
 
-      <div className="products-grid">
-        {displayedProducts.map((product) => (
-          <div
-            key={product.id}
-            className={`product-card ${
-              chooseMode && selectedProducts.includes(product.id)
-                ? "selected"
-                : ""
-            }`}
-          >
-            {chooseMode && (
-              <input
-                type="checkbox"
-                className="choose-checkbox"
-                checked={selectedProducts.includes(product.id)}
-                onChange={() => toggleProductSelection(product.id)}
-              />
-            )}
+      <div className="search-section">
+        <input
+          placeholder="Search by title..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+    </div>
 
-            <div className="product-image-wrapper">
-              <img src={product.image} alt={product.title} className="product-image" />
+    <div className="products-grid">
+      {displayedProducts.map((product) => (
+        <div
+          key={product.id}
+          className={`product-card ${
+            chooseMode && selectedProducts.includes(product.id)
+              ? "selected"
+              : ""
+          }`}
+        >
+          {chooseMode && (
+            <input
+              type="checkbox"
+              className="choose-checkbox"
+              checked={selectedProducts.includes(product.id)}
+              onChange={() => toggleProductSelection(product.id)}
+            />
+          )}
+
+          <div className="product-image-wrapper">
+            <img
+              src={product.image}
+              alt={product.title}
+              className="product-image"
+            />
+          </div>
+
+          <div className="product-content">
+            <h3 className="product-name">{product.title}</h3>
+            <p className="product-description">{product.description}</p>
+
+            <div className="product-footer">
+              <span className="product-price">
+                {product.price} {product.currency}
+              </span>
+              <span className="product-date">{product.created_at}</span>
             </div>
 
-            <div className="product-content">
-              <h3 className="product-name">{product.title}</h3>
-              <p className="product-description">{product.description}</p>
-              <div className="product-footer">
-                <span className="product-price">{product.price} {product.currency}</span>
-                <span className="product-date">{product.created_at}</span>
-              </div>
-
-              <div
-                className="additional-info-toggle"
-                onClick={() => toggleInfo(product.id)}
+            <div
+              className="additional-info-toggle"
+              onClick={() => toggleInfo(product.id)}
+            >
+              Additional Information
+              <span
+                className={`info-arrow ${
+                  openInfoId === product.id ? "open" : ""
+                }`}
               >
-                Additional Information
-                <span className={`info-arrow ${openInfoId === product.id ? "open" : ""}`}>▾</span>
-              </div>
+                ▾
+              </span>
+            </div>
 
-              {openInfoId === product.id && (
-                <div className="additional-info-box">
-                  <div><span>Status</span><strong>{product.stats?.status || "—"}</strong></div>
-                  <div><span>Commission</span><strong style={{color: "#00ffff"}}>{product.commission ?? "—"} {product.currency}</strong></div>
-                  <div><span>Final Reward</span><strong style={{color: "lime"}}>{product.final_price ?? "—"} {product.currency}</strong></div>
-                  <div><span>Completed Transactions</span><strong>{product.stats?.count ?? 0}</strong></div>
+            {openInfoId === product.id && (
+              <div className="additional-info-box">
+                <div>
+                  <span>Status</span>
+                  <strong>{product.stats?.status || "—"}</strong>
+                </div>
 
-                  {!!product.stats?.transactions?.length && (
-                    <>
-                      <div
-                        className="transactions-toggle"
-                        onClick={() => setTxOverlayId(txOverlayId === product.id ? null : product.id)}
-                      >
-                        Transaction hashes:
-                      </div>
-                      {txOverlayId === product.id && (
-                        <div className="tx-overlay">
-                          <div className="tx-overlay-header">
-                            <h2 className="tx-h2">Tx-hashes</h2>
-                            <button className="tx-overlay-close" onClick={() => setTxOverlayId(null)}>✕</button>
-                          </div>
-                          <ul className="tx-overlay-content">
-                            {product.stats.transactions.map((tx, i) => (
-                              <li key={i} className="tx-hash" onClick={() => copyToClipboard(tx.hash)}>
-                                {tx.hash.slice(0, 20)}...
-                              </li>
-                            ))}
-                          </ul>
+                <div>
+                  <span>Commission</span>
+                  <strong className="commission-color">
+                    {product.commission ?? "—"} {product.currency}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Final Reward</span>
+                  <strong className="final-reward-color">
+                    {product.final_price ?? "—"} {product.currency}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Completed Transactions</span>
+                  <strong>{product.stats?.count ?? 0}</strong>
+                </div>
+
+                {!!product.stats?.transactions?.length && (
+                  <>
+                    <div
+                      className="transactions-toggle"
+                      onClick={() =>
+                        setTxOverlayId(
+                          txOverlayId === product.id ? null : product.id
+                        )
+                      }
+                    >
+                      Transaction hashes:
+                    </div>
+
+                    {txOverlayId === product.id && (
+                      <div className="tx-overlay">
+                        <div className="tx-overlay-header">
+                          <h2 className="tx-h2">Tx-hashes</h2>
+                          <button
+                            className="tx-overlay-close"
+                            onClick={() => setTxOverlayId(null)}
+                          >
+                            ✕
+                          </button>
                         </div>
-                      )}
-                    </>
-                  )}
+
+                        <ul className="tx-overlay-content">
+                          {product.stats.transactions.map((tx, i) => (
+                            <li
+                              key={i}
+                              className="tx-hash"
+                              onClick={() => copyToClipboard(tx.hash)}
+                            >
+                              {tx.hash.slice(0, 20)}...
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            <div className="product-timer">
+              {timers[product.id] !== undefined &&
+                formatTime(timers[product.id])}
+            </div>
+
+            <button
+              className="product-button"
+              onClick={() => navigate(`/pay/${product.id}`)}
+            >
+              View
+            </button>
+          </div>
+
+          <div className="three-dots-container">
+            <button
+              className={`three-dots ${
+                deleteOverlayIds.includes(product.id)
+                  ? "three-dots-hidden"
+                  : ""
+              }`}
+              onClick={() => toggleMenu(product.id)}
+            >
+              &#8942;
+            </button>
+
+            {openMenuId === product.id &&
+              !deleteOverlayIds.includes(product.id) && (
+                <div className="dots-menu">
+                  <button onClick={() => handleEdit(product)}>Edit</button>
+                  <button onClick={() => showDeleteOverlay(product.id)}>
+                    Delete
+                  </button>
+                  <button onClick={() => handleShare(product)}>Share</button>
                 </div>
               )}
 
-              <div className="product-timer">
-                {timers[product.id] !== undefined && formatTime(timers[product.id])}
+            {deleteOverlayIds.includes(product.id) && (
+              <div className="delete-overlay">
+                <div className="delete-modal">
+                  <h3 className="delete-title">Confirm Delete</h3>
+
+                  <p>
+                    Are you sure you want to delete this product? This action
+                    cannot be undone.
+                  </p>
+
+                  <div className="delete-actions">
+                    <button
+                      className="delete-cancel-btn"
+                      onClick={() => hideDeleteOverlay(product.id)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="delete-confirm-btn"
+                      onClick={() => confirmDelete(product.id)}
+                    >
+                      Confirm
+                    </button>
+                  </div>
+                </div>
               </div>
-
-              <button className="product-button" onClick={() => navigate(`/pay/${product.id}`)}>View</button>
-            </div>
-
-           <div className="three-dots-container">
-  <button
-    className="three-dots"
-    onClick={() => toggleMenu(product.id)}
-    style={{
-      display: deleteOverlayIds.includes(product.id) ? "none" : "flex", // 🔹 ховаємо кнопку під час модалки
-    }}
-  >
-    &#8942;
-  </button>
-
-  {openMenuId === product.id && !deleteOverlayIds.includes(product.id) && (
-    <div className="dots-menu">
-      <button onClick={() => handleEdit(product)}>Edit</button>
-      <button onClick={() => showDeleteOverlay(product.id)}>Delete</button>
-      <button onClick={() => handleShare(product)}>Share</button>
-    </div>
-  )}
-
-  {/* 🔴 Delete Overlay всередині продукту */}
-  {deleteOverlayIds.includes(product.id) && (
-    <div style={overlay}>
-      <div style={modal}>
-        <h3 style={{ marginBottom: 20, color: "#ff0044" }}>Confirm Delete</h3>
-        <p>
-          Are you sure you want to delete this product? This action cannot be
-          undone.
-        </p>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginTop: 30,
-          }}
-        >
-          <button
-            style={cancelBtn}
-            onClick={() => hideDeleteOverlay(product.id)}
-          >
-            Cancel
-          </button>
-          <button
-            style={confirmBtn}
-            onClick={() => confirmDelete(product.id)}
-          >
-            Confirm
-          </button>
-        </div>
-      </div>
-    </div>
-  )}
-</div>
-
+            )}
           </div>
-        ))}
-      </div>
-    </section>
-  );
+        </div>
+      ))}
+    </div>
+  </section>
+);
 }
-
-/* ---------------- STYLES ---------------- */
-const overlay = {
-  position: "relative",
-  top: 9,
-  left: 9,
-  right: 9,
-  bottom: 9,
-  background: "rgba(0,0,0,0.8)",
-  display: "flex",
-  justifyContent: "flex-start",
-  alignItems: "center",         
-  paddingLeft: 10,              
-  zIndex: 9999,
-};
-
-const modal = {
-  background: "#111",
-  padding: 18,
-  borderRadius: 12,
-  border: "2px solid #ff0044",
-  color: "#fff",
-  maxWidth: 400,
-  width: "90%",
-  textAlign: "center",
-};
-
-
-const cancelBtn = {
-  padding: "10px 20px",
-  background: "#555",
-  color: "#fff",
-  border: "none",
-  borderRadius: 6,
-  cursor: "pointer",
-};
-
-const confirmBtn = {
-  padding: "10px 20px",
-  background: "#ff0044",
-  color: "#fff",
-  border: "none",
-  borderRadius: 6,
-  cursor: "pointer",
-};
 

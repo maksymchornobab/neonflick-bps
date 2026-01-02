@@ -13,7 +13,6 @@ import { useWalletAuth } from "./components/WalletAuthContext";
 
 import TermsConsentModal, { DeniedScreen } from "./components/TermsConsentModal";
 
-
 import LegalNotice from "./legal/LegalNotice";
 import PrivacyPolicy from "./legal/PrivacyPolicy";
 import TermsAndConditions from "./legal/TermsAndConditions";
@@ -34,7 +33,8 @@ export default function App() {
     // 🔒 blocked wallet
     showBlockedModal,
     blockedWallet,
-    closeBlockedModal,
+    logout, // ⚡ використовується для очищення стану і localStorage
+    closeBlockedModal, // ⚡ ховає модалку
 
     // 📜 access consents
     showConsentModal,
@@ -46,7 +46,6 @@ export default function App() {
   const [activeSection, setActiveSection] = useState("products");
   const [editingProduct, setEditingProduct] = useState(null);
   const [consentDenied, setConsentDenied] = useState(false);
-
 
   if (loading) {
     return <main className="center">Loading...</main>;
@@ -91,41 +90,39 @@ export default function App() {
 
       {/* ❌ Blocked Wallet Modal */}
       {showBlockedModal && (
-        <div className="blocked-modal-backdrop">
+        <div className="blocked-modal-backdrop" style={{ zIndex: 1000 }}>
           <div className="blocked-modal">
             <h2>Wallet Blocked</h2>
-            <p>
+            <p className="p-block-message">
               The wallet <b>{blockedWallet}</b> has been blocked.
             </p>
-            <p>Please connect a different wallet to continue.</p>
-            <button onClick={closeBlockedModal}>OK</button>
+            <p className="p-block">Please click on your currently connected wallet and connect a different wallet to continue.</p>
+            <button
+              type="button"
+              onClick={() => {
+                logout();           // очищаємо localStorage і стан
+                closeBlockedModal(); // ховаємо модалку
+              }}
+            >
+              OK
+            </button>
           </div>
         </div>
       )}
 
       {/* 📜 Terms + Crypto Risk Consent */}
-      {showConsentModal && (
-        <TermsConsentModal
-          wallet={consentWallet}
-          token={token}
-          onAgree={confirmAccessConsents}
-          onReject={rejectAccessConsents}
-        />
-      )}
-
       {consentDenied ? (
-       <DeniedScreen />
-       ) : (
-       showConsentModal && (
-        <TermsConsentModal
-         wallet={consentWallet}
-         token={token}
-         onAgree={confirmAccessConsents}
-         onReject={() => setConsentDenied(true)}
-        />
-       )
+        <DeniedScreen />
+      ) : (
+        showConsentModal && (
+          <TermsConsentModal
+            wallet={consentWallet}
+            token={token}
+            onAgree={confirmAccessConsents}
+            onReject={() => setConsentDenied(true)}
+          />
+        )
       )}
-
 
       <Routes>
         {/* 💳 Public routes */}

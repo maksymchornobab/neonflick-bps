@@ -166,6 +166,11 @@ export default function CreateSection() {
       return;
     }
 
+    if (needsConsent && !consentChecked) {
+      setNotification("You must accept AML Policy and Platform Disclaimer.");
+      return;
+    }
+
     if (maxProductsReached) {
       setNotification("Operation canceled: Maximum of 10 products reached.");
       return;
@@ -430,9 +435,17 @@ export default function CreateSection() {
       <a href="/howto/payment-instruction" className="wallet-readmore">Read More</a>
     </p>
 
-    <button className="create-submit-btn" disabled={loading || maxProductsReached}>
-      {loading ? "Creating..." : "Create product"}
-    </button>
+    <button
+  className="create-submit-btn"
+  disabled={
+    loading ||
+    maxProductsReached ||
+    (needsConsent && !consentChecked)
+  }
+>
+  {loading ? "Creating..." : "Create product"}
+</button>
+
   </form>
 
   {imagePreview && (

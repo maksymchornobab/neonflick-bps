@@ -133,135 +133,142 @@ export default function EditSection({ product, onCancel }) {
 
   return (
     <section id="edit" className="section">
-      {notification && (
-        <Notification message={notification} onClose={() => setNotification("")} />
-      )}
+  {notification && (
+    <Notification message={notification} onClose={() => setNotification("")} />
+  )}
 
-      <form className="create-form" onSubmit={handleSubmit} encType="multipart/form-data">
-      <p style={{ color: "red", fontSize: "20px", fontWeight: "bold", marginTop: "10px", marginBottom: "8px", textAlign: "center" }}>
-        Warning: All entered data will be lost if you leave this page!
+  <form className="create-form" onSubmit={handleSubmit} encType="multipart/form-data">
+    <p className="edit-warning-text">
+      Warning: All entered data will be lost if you leave this page!
+    </p>
+
+    <h2>Edit product</h2>
+
+    {imagePreview && (
+      <div className="image-preview-wrapper">
+        <div className="image-preview-frame">
+          <img src={imagePreview} alt="Preview" />
+        </div>
+      </div>
+    )}
+
+    <label className="file-input">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageChange}
+      />
+      <span className="file-name">{image ? image.name : "Upload image"}</span>
+    </label>
+
+    <div className="input-wrapper">
+      <span className="char-counter">{title.length}/50</span>
+      <input
+        className="edit-title-input"
+        placeholder="Title (max 50 symbols)"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        maxLength={50}
+        required
+      />
+    </div>
+
+    <div className="input-wrapper">
+      <span className="char-counter1">{description.length}/1000</span>
+      <textarea
+        className="edit-descr-textarea"
+        placeholder="Description (max 1000 symbols)"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        maxLength={1000}
+        required
+      />
+    </div>
+
+    <div className="price-row">
+      <input
+        className="edit-price-input"
+        value={price}
+        onChange={handlePriceChange}
+        required
+        placeholder="Price (0.001 - 1,000,000)"
+      />
+      <select
+        className="edit-currency-select"
+        value={currency}
+        onChange={(e) => setCurrency(e.target.value)}
+        required
+      >
+        <option value="">Select currency</option>
+        <option value="SOL">SOL</option>
+      </select>
+    </div>
+
+    {/* 🔹 Commission */}
+    {currency === "SOL" && commission !== null && (
+      <p
+        className="edit-commission-text"
+        onClick={() => setShowCommissionTable(!showCommissionTable)}
+      >
+        <strong className="commission-word">Commission:</strong>{" "}
+        {commission} SOL (click to view table)
       </p>
-        <h2>Edit product</h2>
+    )}
 
-        {imagePreview && (
-          <div className="image-preview-wrapper">
-            <div className="image-preview-frame">
-              <img src={imagePreview} alt="Preview" />
-            </div>
-          </div>
-        )}
+    {/* 🔹 Commission Table */}
+    {showCommissionTable && currency === "SOL" && (
+      <table className="commission-table edit-commission-table">
+        <thead>
+          <tr>
+            <th>Price Range (SOL)</th>
+            <th>Commission</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>0.001 – 0.01</td><td>10%</td></tr>
+          <tr><td>0.01 – 0.1</td><td>5%</td></tr>
+          <tr><td>0.1 – 1</td><td>1%</td></tr>
+          <tr><td>1 – 100</td><td>0.25%</td></tr>
+          <tr><td>100 - 1 000 000</td><td>0.25 SOL fixed</td></tr>
+        </tbody>
+      </table>
+    )}
 
-        <label className="file-input">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleImageChange}
-          />
-          <span className="file-name">{image ? image.name : "Upload image"}</span>
-        </label>
+    {/* 🔹 Final price */}
+    {currency === "SOL" && finalPrice !== null && (
+      <p className="edit-final-price-text">
+        You will receive: {finalPrice} SOL
+      </p>
+    )}
 
-        <div className="input-wrapper">
-          <span className="char-counter">{title.length}/50</span>
-          <input
-            placeholder="Title (max 50 symbols)"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            maxLength={50}
-            required
-          />
-        </div>
+    <div className="actions">
+      <button disabled={loading}>
+        {loading ? "Saving..." : "Save changes"}
+      </button>
+      <button type="button" onClick={onCancel}>
+        Cancel
+      </button>
+    </div>
+  </form>
 
-        <div className="input-wrapper">
-          <span className="char-counter1">{description.length}/1000</span>
-          <textarea
-            placeholder="Description (max 1000 symbols)"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            maxLength={1000}
-            required
-          />
-        </div>
+  {imagePreview && (
+    <>
+      <button
+        type="button"
+        className="img-btn remove"
+        onClick={handleRemoveImage}
+        title="Remove image"
+      />
+      <button
+        type="button"
+        className="img-btn replace"
+        onClick={handleReplaceImage}
+        title="Replace image"
+      />
+    </>
+  )}
+</section>
 
-        <div className="price-row">
-          <input
-            value={price}
-            onChange={handlePriceChange}
-            required
-            placeholder="Price (0.001 - 1,000,000)"
-          />
-          <select
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value)}
-            required
-          >
-            <option value="">Select currency</option>
-            <option value="SOL">SOL</option>
-          </select>
-        </div>
-
-        {/* 🔹 Commission */}
-        {currency === "SOL" && commission !== null && (
-          <p
-            style={{ color: "#00ffff", fontWeight: "bold", cursor: "pointer" }}
-            onClick={() => setShowCommissionTable(!showCommissionTable)}
-          >
-            <strong className="commission-word">Commission:</strong> {commission} SOL (click to view table)
-          </p>
-        )}
-
-        {/* 🔹 Commission Table */}
-        {showCommissionTable && currency === "SOL" && (
-          <table className="commission-table" style={{ marginBottom: "10px" }}>
-            <thead>
-              <tr>
-                <th>Price Range (SOL)</th>
-                <th>Commission</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td>0.001 – 0.01</td><td>10%</td></tr>
-              <tr><td>0.01 – 0.1</td><td>5%</td></tr>
-              <tr><td>0.1 – 1</td><td>1%</td></tr>
-              <tr><td>1 – 100</td><td>0.25%</td></tr>
-              <tr><td>100 - 1 000 000</td><td>0.25 SOL fixed</td></tr>
-            </tbody>
-          </table>
-        )}
-
-        {/* 🔹 Final price */}
-        {currency === "SOL" && finalPrice !== null && (
-          <p style={{ color: "#00ff88", fontWeight: "bold" }}>
-            You will receive: {finalPrice} SOL
-          </p>
-        )}
-
-        <div className="actions">
-          <button disabled={loading}>
-            {loading ? "Saving..." : "Save changes"}
-          </button>
-          <button type="button" onClick={onCancel}>
-            Cancel
-          </button>
-        </div>
-      </form>
-
-      {imagePreview && (
-        <>
-          <button
-            type="button"
-            className="img-btn remove"
-            onClick={handleRemoveImage}
-            title="Remove image"
-          />
-          <button
-            type="button"
-            className="img-btn replace"
-            onClick={handleReplaceImage}
-            title="Replace image"
-          />
-        </>
-      )}
-    </section>
   );
 }

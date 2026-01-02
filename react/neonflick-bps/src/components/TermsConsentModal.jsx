@@ -33,11 +33,9 @@ export default function TermsConsentModal({
 
     setLoading(true);
     try {
-      // ✅ зберігаємо ОБИДВІ згоди
       await saveConsent("terms");
       await saveConsent("crypto_risk_disclosure");
-
-      onAgree(); // 🔔 сигнал контексту/App
+      onAgree();
     } catch (err) {
       console.error("Consent error:", err);
       alert("Failed to save consents. Please try again.");
@@ -48,24 +46,24 @@ export default function TermsConsentModal({
 
   const handleReject = () => {
     if (loading) return;
-    onReject(); // 🔔 повідомляємо App, що користувач відмовився
+    onReject();
   };
 
   return createPortal(
-    <div style={overlay}>
-      <div style={modal}>
-        <h2 style={title}>User Agreement Required</h2>
+    <div className="terms-overlay">
+      <div className="terms-modal">
+        <h2 className="terms-title">User Agreement Required</h2>
 
-        <p style={text}>
+        <p className="terms-text">
           To continue using the platform, you must carefully review and accept
           the Terms & Conditions and acknowledge the risks associated with
           cryptocurrency usage.
         </p>
 
-        {/* TERMS */}
         <ConsentRow
           checked={terms}
           onChange={setTerms}
+          disabled={loading}
           label={
             <>
               I agree to the{" "}
@@ -73,19 +71,18 @@ export default function TermsConsentModal({
                 href="/legal/terms"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={link}
+                className="terms-link"
               >
                 Terms & Conditions
               </a>
             </>
           }
-          disabled={loading}
         />
 
-        {/* CRYPTO RISK */}
         <ConsentRow
           checked={risk}
           onChange={setRisk}
+          disabled={loading}
           label={
             <>
               I understand and accept the{" "}
@@ -93,23 +90,20 @@ export default function TermsConsentModal({
                 href="/legal/crypto-risks"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={link}
+                className="terms-link"
               >
                 Crypto Risk Disclosure
               </a>
             </>
           }
-          disabled={loading}
         />
 
         <button
           onClick={handleAgree}
           disabled={!canSubmit}
-          style={{
-            ...primaryBtn,
-            background: canSubmit ? "#00ffff" : "#003333",
-            cursor: canSubmit ? "pointer" : "not-allowed",
-          }}
+          className={`terms-primary-btn ${
+            canSubmit ? "active" : "disabled"
+          }`}
         >
           {loading ? "Saving..." : "Agree & Continue"}
         </button>
@@ -117,7 +111,7 @@ export default function TermsConsentModal({
         <button
           onClick={handleReject}
           disabled={loading}
-          style={rejectBtn}
+          className="terms-reject-btn"
         >
           I Do Not Agree
         </button>
@@ -128,13 +122,12 @@ export default function TermsConsentModal({
 }
 
 /* ---------------- DENIED SCREEN ---------------- */
+
 export function DeniedScreen() {
   return createPortal(
-    <div style={deniedContainer}>
-      <h2 style={{ color: "#ff0044", marginBottom: 20 }}>
-        Access Restricted
-      </h2>
-      <p style={deniedText}>
+    <div className="denied-container">
+      <h2 className="denied-title">Access Restricted</h2>
+      <p className="denied-text">
         We’re sorry, but without accepting the Terms & Conditions and the
         Crypto Risk Disclosure, we are unable to provide access to this
         platform.
@@ -148,85 +141,14 @@ export function DeniedScreen() {
 
 function ConsentRow({ checked, onChange, label, disabled }) {
   return (
-    <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
+    <div className="consent-row">
       <input
         type="checkbox"
         checked={checked}
         disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
       />
-      <label style={{ lineHeight: 1.5 }}>{label}</label>
+      <label className="consent-label">{label}</label>
     </div>
   );
 }
-
-/* ---------------- STYLES ---------------- */
-
-const overlay = {
-  position: "fixed",
-  inset: 0,
-  background: "rgba(0,0,0,0.95)",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  zIndex: 9999,
-};
-
-const modal = {
-  background: "#111",
-  border: "2px solid #00ffff",
-  borderRadius: 16,
-  padding: 30,
-  width: 520,
-  maxWidth: "90%",
-  color: "#fff",
-  boxShadow: "0 0 20px #00ffff",
-};
-
-const title = { color: "#00ffff", textAlign: "center" };
-const text = { marginTop: 20, lineHeight: 1.6 };
-
-const link = {
-  color: "#00ffff",
-  fontWeight: "bold",
-  textDecoration: "underline",
-};
-
-const primaryBtn = {
-  marginTop: 30,
-  width: "100%",
-  padding: 12,
-  color: "#111",
-  fontWeight: "bold",
-  border: "none",
-  borderRadius: 8,
-};
-
-const rejectBtn = {
-  marginTop: 10,
-  width: "100%",
-  padding: 12,
-  background: "transparent",
-  color: "#ff0044",
-  border: "2px solid #ff0044",
-  borderRadius: 8,
-};
-
-const deniedContainer = {
-  position: "fixed",
-  inset: 0,
-  background: "rgba(0,0,0,0.95)",
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "center",
-  alignItems: "center",
-  color: "#fff",
-  zIndex: 9999,
-  padding: 40,
-  textAlign: "center",
-};
-
-const deniedText = {
-  lineHeight: 1.7,
-  opacity: 0.9,
-};

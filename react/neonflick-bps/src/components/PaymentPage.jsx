@@ -201,6 +201,15 @@ function PaymentPage() {
           </div>
         )}
 
+        {descriptionOpen && (
+        <div className="payment-card payment-card--description payment-card--active">
+          <h2>Full Description</h2>
+          <div className="payment-card__full-description">
+            {product.description}
+          </div>
+        </div>
+      )}
+
         <div className="payment-card__details">
           <div>
             <span>Price:</span>
@@ -284,15 +293,6 @@ function PaymentPage() {
 
         <a href="/howto/payment-instruction" target="_blank" rel="noopener noreferrer" className="pay-instr">Payment Instruction</a>
       </div>
-
-      {descriptionOpen && (
-        <div className="payment-card payment-card--description payment-card--active">
-          <h2>Full Description</h2>
-          <div className="payment-card__full-description">
-            {product.description}
-          </div>
-        </div>
-      )}
 
       {notification && (
         <Notification message={notification} onClose={() => setNotification("")} />

@@ -31,6 +31,7 @@ body {
 }
 
 .logo {
+  font-size: 32px;
   color: var(--neon);
   letter-spacing: 2px;
   text-shadow: 0 0 10px var(--neon);
@@ -231,6 +232,7 @@ body {
   text-align: center;
   cursor: pointer;
   position: relative;
+  margin-right: 0;
 }
 
 .file-input input {
@@ -247,7 +249,7 @@ body {
 
 .img-btn {
   position: absolute;
-  top: 379px;
+  top: 370px;
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -284,9 +286,11 @@ body {
 .create-currency-select,
 .create-price-input {
   width: 100%;
+  margin-right: 0;
 }
 
 .price-row {
+  margin-right: 0;
   width: 92%;
   display: flex;
   gap: 12px;
@@ -382,7 +386,7 @@ body {
   color: red;
   font-size: 20px;
   font-weight: bold;
-  margin-top: 10px;
+  margin-top: 0;
   margin-bottom: 8px;
   text-align: center;
 }
@@ -494,7 +498,41 @@ body {
   text-align: center;
 }
 
+/* Warning text */
+.edit-warning-text {
+  color: red;
+  font-size: 20px;
+  font-weight: bold;
+  margin-top: 10px;
+  margin-bottom: 8px;
+  text-align: center;
+}
 
+/* Commission clickable text */
+.edit-commission-text {
+  color: #00ffff;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* Commission table spacing */
+.edit-commission-table {
+  margin-bottom: 10px;
+}
+
+/* Final price */
+.edit-final-price-text {
+  color: #00ff88;
+  font-weight: bold;
+}
+
+.edit-title-input,
+.edit-descr-textarea,
+.edit-price-input,
+.edit-currency-select {
+  margin-right: 0;
+  width: 100%;
+}
 
 /* STATES */
 .products-loading,
@@ -748,6 +786,76 @@ body {
   color: #111;
 }
 
+/* inline color replacements */
+.commission-color {
+  color: #00ffff;
+}
+
+.final-reward-color {
+  color: lime;
+}
+
+/* three dots visibility */
+.three-dots-hidden {
+  display: none;
+}
+
+/* delete overlay */
+.delete-overlay {
+  position: relative;
+  top: 9px;
+  left: 9px;
+  right: 9px;
+  bottom: 9px;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  padding-left: 10px;
+  z-index: 9999;
+}
+
+.delete-modal {
+  background: #111;
+  padding: 18px;
+  border-radius: 12px;
+  border: 2px solid #ff0044;
+  color: #fff;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+}
+
+.delete-title {
+  margin-bottom: 20px;
+  color: #ff0044;
+}
+
+.delete-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 30px;
+}
+
+.delete-cancel-btn {
+  padding: 10px 20px;
+  background: #555;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.delete-confirm-btn {
+  padding: 10px 20px;
+  background: #ff0044;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+
 /* Overlay */
 .wallet-modal-overlay {
   position: fixed;
@@ -983,6 +1091,7 @@ body {
 /* Модальне положення для результатів пошуку */
 .search-section {
   position: relative;
+  width: 63%;
 }
 
 /* Сортування */
@@ -1208,28 +1317,27 @@ body {
 }
 
 /* 💳 Окреме вікно для description */
-.payment-card--description {
-  width: 380px;
-  height: 615.77px;
-  background: rgba(0, 30, 30, 0.55);
-  backdrop-filter: blur(14px);
-  border-radius: 18px;
-  padding: 22px;
+.payment-card__description-box {
+  margin-top: 12px;
+  padding: 16px;
+  background: rgba(0, 20, 20, 0.65);
+  border-radius: 14px;
   border: 1px solid rgba(0, 255, 255, 0.35);
+
   box-shadow:
-    0 0 25px rgba(0, 255, 255, 0.15),
-    inset 0 0 20px rgba(0, 255, 255, 0.08);
+    inset 0 0 15px rgba(0, 255, 255, 0.1),
+    0 0 18px rgba(0, 255, 255, 0.15);
+
+  max-height: 220px;
   overflow-y: auto;
 
-  /* 🔹 Початковий стан для анімації */
-  opacity: 0;
-  transform: translateX(50px);
-  transition: opacity 0.5s ease, transform 0.5s ease;
-  pointer-events: none; /* щоб блок не заважав при закритому стані */
+  animation: descriptionFadeIn 0.35s ease;
 }
+
 
 /* 🔹 Активний стан */
 .payment-card--description.payment-card--active {
+  width: 100%;
   opacity: 1;
   transform: translateX(0);
   pointer-events: auto;
@@ -1490,7 +1598,7 @@ body {
 
 .tx-overlay {
   position: absolute;
-  top: 424px;
+  top: 403px;
   right: 18px;
   width: 242px;
   height: 126px;
@@ -1860,7 +1968,7 @@ body {
 }
 
 /* Text */
-.blocked-modal p {
+.p-block-message {
   color: #ffffff;
   font-family: "Courier New", Courier, monospace;
   margin-bottom: 1rem;
@@ -1934,4 +2042,207 @@ body {
   color: #00ffff;
   text-decoration: underline;
   font-weight: bold;
+}
+
+/* OVERLAY */
+.terms-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+/* MODAL */
+.terms-modal {
+  background: #111;
+  border: 2px solid #00ffff;
+  border-radius: 16px;
+  padding: 30px;
+  width: 520px;
+  max-width: 90%;
+  color: #fff;
+  box-shadow: 0 0 20px #00ffff;
+}
+
+/* TEXT */
+.terms-title {
+  color: #00ffff;
+  text-align: center;
+}
+
+.terms-text {
+  margin-top: 20px;
+  line-height: 1.6;
+}
+
+/* LINKS */
+.terms-link {
+  color: #00ffff;
+  font-weight: bold;
+  text-decoration: underline;
+}
+
+/* CONSENT ROW */
+.consent-row {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+}
+
+.consent-label {
+  line-height: 1.5;
+}
+
+/* BUTTONS */
+.terms-primary-btn {
+  margin-top: 30px;
+  width: 100%;
+  padding: 12px;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+}
+
+.terms-primary-btn.active {
+  background: #00ffff;
+  color: #111;
+  cursor: pointer;
+}
+
+.terms-primary-btn.disabled {
+  background: #003333;
+  cursor: not-allowed;
+}
+
+.terms-reject-btn {
+  margin-top: 10px;
+  width: 100%;
+  padding: 12px;
+  background: transparent;
+  color: #ff0044;
+  border: 2px solid #ff0044;
+  border-radius: 8px;
+}
+
+/* DENIED SCREEN */
+.denied-container {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: #fff;
+  z-index: 9999;
+  padding: 40px;
+  text-align: center;
+}
+
+.denied-title {
+  color: #ff0044;
+  margin-bottom: 20px;
+}
+
+.denied-text {
+  line-height: 1.7;
+  opacity: 0.9;
+}
+
+.p-block {
+  color: #00ffff;
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 20px 15px;
+  }
+
+  .logo {
+    font-size: 15px;
+  }
+
+  .nav-btn {
+    padding: 8px 11px;
+  }
+
+  .wallet-adapter-button {
+    width: 152px;
+  }
+
+  .choose-section button {
+    padding: 6px 6px;
+  }
+
+  .search-section {
+    width: 75%;
+  }
+
+  .search-section input {
+    width: 260px;
+  }
+
+  .notification {
+    left: 20%;
+  }
+
+  .file-input {
+    width: 80%;
+    margin-right: 80px;
+  }
+
+  .img-btn {
+    top: 370px;
+  }
+
+  .img-btn.replace {
+    right: 50px;
+  }
+
+  .img-btn.remove {
+    right: 10px;
+  }
+
+  .create-title-input,
+  .create-descr-textarea,
+  .create-descr-textarea {
+    width: 80%;
+    margin-right: 80px;
+  }
+
+  .create-duration-select {
+    width: 80%;
+  }
+
+  .char-counter {
+   right: 35px;
+  }
+
+  .char-counter1 {
+    right: 1px;
+  }
+
+  .price-row {
+   margin-right: 30px;
+   width: 92%;
+  }
+
+  .consent-box {
+    gap: 1px;
+    font-size: 14px;
+  }
+
+  .edit-warning-text {
+    margin-top: 0;
+  }
+
+  .edit-title-input,
+  .edit-descr-textarea {
+    width: 80%;
+    margin-right: 80px;
+  }
 }

@@ -63,7 +63,7 @@ export default function CreateSection() {
   /* ---------------- API ---------------- */
   const fetchProducts = async () => {
   try {
-    const res = await fetch("http://127.0.0.1:5000/products", {
+    const res = await fetch("https://neonflick-bps-production.up.railway.app/products", {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
 
@@ -83,7 +83,7 @@ const fetchMeAndConsents = async () => {
   try {
     setConsentsLoaded(false);
 
-    const meRes = await fetch("http://127.0.0.1:5000/auth/me", {
+    const meRes = await fetch("https://neonflick-bps-production.up.railway.app/auth/me", {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -102,7 +102,7 @@ const fetchMeAndConsents = async () => {
 
     setWallet(userWallet);
 
-    const consentRes = await fetch("http://127.0.0.1:5000/auth/consent/check", {
+    const consentRes = await fetch("https://neonflick-bps-production.up.railway.app/auth/consent/check", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ wallet: userWallet }),
@@ -134,7 +134,7 @@ const calculateCommission = async (priceValue) => {
       return;
     }
 
-    const res = await fetch(`http://127.0.0.1:5000/calculate_commission_sol?price=${priceValue}`);
+    const res = await fetch(`https://neonflick-bps-production.up.railway.app/calculate_commission_sol?price=${priceValue}`);
     if (!res.ok) {
       throw new Error("Failed to calculate commission.");
     }
@@ -152,7 +152,7 @@ const calculateCommission = async (priceValue) => {
 
 const submitConsent = async (consentName) => {
   try {
-    const res = await fetch("http://127.0.0.1:5000/auth/consent", {
+    const res = await fetch("https://neonflick-bps-production.up.railway.app/auth/consent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ wallet, consent: consentName }),
@@ -237,7 +237,7 @@ const handleSubmit = async (e) => {
     formData.append("currency", currency);
     formData.append("duration", duration);
 
-    const res = await fetch("http://127.0.0.1:5000/create_product", {
+    const res = await fetch("https://neonflick-bps-production.up.railway.app/create_product", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: formData,

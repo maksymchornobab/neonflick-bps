@@ -47,7 +47,7 @@ const calculateCommission = async (priceValue) => {
     }
 
     const res = await fetch(
-      `http://127.0.0.1:5000/calculate_commission_sol?price=${priceValue}`
+      `https://neonflick-bps-production.up.railway.app/calculate_commission_sol?price=${priceValue}`
     );
 
     if (!res.ok) {
@@ -124,7 +124,7 @@ const handleSubmit = async (e) => {
 
   // ---------- SEND REQUEST ----------
   try {
-    const res = await fetch("http://127.0.0.1:5000/update_product", {
+    const res = await fetch("https://neonflick-bps-production.up.railway.app/update_product", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: formData,

@@ -69,7 +69,7 @@ function PaymentPage() {
   useEffect(() => {
     const fetchPaymentData = async () => {
   try {
-    const res = await fetch(`http://127.0.0.1:5000/api/pay/${productId}`);
+    const res = await fetch(`https://neonflick-bps-production.up.railway.app/api/pay/${productId}`);
 
     if (!res.ok) {
       setError("Product is unavailable or expired");
@@ -132,7 +132,7 @@ function PaymentPage() {
     setNotification("Preparing transaction. Please wait…");
 
     // ---------- PREPARE TRANSACTION (BACKEND) ----------
-    const res = await fetch("http://127.0.0.1:5000/api/pay/prepare/sol", {
+    const res = await fetch("https://neonflick-bps-production.up.railway.app/api/pay/prepare/sol", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -227,7 +227,7 @@ function PaymentPage() {
     const timestamps = consentNames.map(() => now);
 
     const backendRes = await fetch(
-      `http://127.0.0.1:5000/api/products/${product._id}/transaction`,
+      `https://neonflick-bps-production.up.railway.app/products/${product._id}/transaction`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

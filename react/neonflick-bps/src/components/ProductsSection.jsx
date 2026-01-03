@@ -36,7 +36,7 @@ export default function ProductsSection({ onEdit }) {
   setLoading(true);
   try {
     const token = localStorage.getItem("jwt_token");
-    const res = await fetch("http://127.0.0.1:5000/products", {
+    const res = await fetch("https://neonflick-bps-production.up.railway.app/products", {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
 
@@ -108,7 +108,7 @@ const copyToClipboard = (text) => {
 const handleEdit = (product) => onEdit(product);
 
 const handleShare = (product) => {
-  const url = `http://localhost:3000/pay/${product.id}`;
+  const url = `https://neonflick-bps-production.up.railway.app/pay/${product.id}`;
   navigator.clipboard.writeText(url).catch((err) => {
     console.error("Failed to copy link:", err);
     setNotification("Failed to copy link");
@@ -118,7 +118,7 @@ const handleShare = (product) => {
 const handleDelete = async (ids) => {
   const productIds = Array.isArray(ids) ? ids : [ids];
   try {
-    const res = await fetch("http://127.0.0.1:5000/delete-products", {
+    const res = await fetch("https://neonflick-bps-production.up.railway.app/delete-products", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids: productIds }),

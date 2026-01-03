@@ -26,7 +26,7 @@ export function WalletAuthProvider({ children }) {
       return;
     }
 
-    fetch("http://127.0.0.1:5000/auth/me", {
+    fetch("https://neonflick-bps-production.up.railway.app/auth/me", {
       headers: { Authorization: `Bearer ${savedToken}` },
     })
       .then((res) => (res.ok ? res.json() : null))
@@ -46,7 +46,7 @@ export function WalletAuthProvider({ children }) {
   const checkAccessConsents = async (wallet, jwt) => {
     try {
       const res = await fetch(
-        "http://127.0.0.1:5000/auth/consent/check",
+        "https://neonflick-bps-production.up.railway.app/auth/consent/check",
         {
           method: "POST",
           headers: {
@@ -76,7 +76,7 @@ export function WalletAuthProvider({ children }) {
   // 🔐 Login / Change wallet
   const loginWithWallet = async (publicKey) => {
     try {
-      const res = await fetch("http://127.0.0.1:5000/auth/wallet", {
+      const res = await fetch("https://neonflick-bps-production.up.railway.app/auth/wallet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ wallet: publicKey }),

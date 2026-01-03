@@ -43,7 +43,7 @@ export default function SuccessModal({ txHash, product, buyerWallet }) {
         image: product.image,
       };
 
-      const res = await fetch("http://127.0.0.1:5000/api/generate-receipt", {
+      const res = await fetch("https://neonflick-bps-production.up.railway.app/api/generate-receipt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(receiptData),

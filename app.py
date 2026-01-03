@@ -19,7 +19,7 @@ from solana.rpc.api import Client
 from solana.publickey import PublicKey
 from fpdf import FPDF
 from fpdf.enums import XPos, YPos
-from flask_mail import Mail, Message
+from mailjet_rest import Client
 
 load_dotenv()
 app = Flask(__name__)
@@ -52,15 +52,16 @@ s3 = boto3.client(
 PLATFORM_WALLET_SOL = os.getenv("PLATFORM_WALLET_ADDRESS_SOL")
 SOLANA_NETWORK = os.getenv("SOLANA_NETWORK")
 
-app.config.update(
-    MAIL_SERVER="smtp.gmail.com",
-    MAIL_PORT=587,
-    MAIL_USE_TLS=True,
-    MAIL_USERNAME=os.getenv("MAIL_USERNAME"),
-    MAIL_PASSWORD=os.getenv("MAIL_PASSWORD"),
-    MAIL_DEFAULT_SENDER=os.getenv("MAIL_DEFAULT_SENDER")
-)
-mail = Mail(app)
+MJ_APIKEY_PUBLIC = os.getenv("MJ_APIKEY_PUBLIC")
+MJ_APIKEY_PRIVATE = os.getenv("MJ_APIKEY_PRIVATE")
+MAILJET_FROM_EMAIL = os.getenv("MAILJET_FROM_EMAIL")
+MAILJET_FROM_NAME = os.getenv("MAILJET_FROM_NAME")
+
+mj_api_key = os.getenv("MJ_APIKEY_PUBLIC")
+mj_api_secret = os.getenv("MJ_APIKEY_PRIVATE")
+
+mailjet = Client(auth=(mj_api_key, mj_api_secret), version="v3.1")
+
 
 # ---------------- HELPERS ----------------
 def decode_token():
@@ -857,9 +858,9 @@ def send_receipt():
     if missing:
         return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
 
+    # --- Генерація PDF ---
     pdf = FPDF()
     pdf.add_page()
-
     pdf.set_fill_color(0, 0, 0)
     pdf.rect(0, 0, pdf.w, pdf.h, "F")
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -873,28 +874,24 @@ def send_receipt():
     pdf.set_text_color(*CYAN)
     pdf.set_font("Helvetica", style="B", size=18)
     pdf.cell(
-        0,
-        12,
+        0, 12,
         "Electronic Payment Receipt",
         align="C",
         new_x=XPos.LMARGIN,
         new_y=YPos.NEXT
     )
     pdf.ln(6)
-
     pdf.line(15, pdf.get_y(), 195, pdf.get_y())
     pdf.ln(8)
 
+    # Додаємо зображення продукту
     try:
         response = requests.get(data["image"], timeout=5)
         response.raise_for_status()
         img_buffer = io.BytesIO(response.content)
-
-        img_width = 100
-        img_height = 60
+        img_width, img_height = 100, 60
         x_pos = (pdf.w - img_width) / 2
         y_pos = pdf.get_y()
-
         pdf.image(img_buffer, x=x_pos, y=y_pos, w=img_width, h=img_height)
         pdf.rect(x_pos, y_pos, img_width, img_height)
         pdf.ln(img_height + 6)
@@ -907,33 +904,21 @@ def send_receipt():
     def add_row(label, value):
         pdf.set_text_color(*CYAN)
         pdf.set_font("Helvetica", style="B", size=12)
-        pdf.cell(
-            label_width,
-            8,
-            label,
-            new_x=XPos.RIGHT,
-            new_y=YPos.TOP
-        )
-
+        pdf.cell(label_width, 8, label, new_x=XPos.RIGHT, new_y=YPos.TOP)
         pdf.set_text_color(*WHITE)
         pdf.set_font("Helvetica", size=12)
         pdf.multi_cell(page_width - label_width, 8, str(value))
         pdf.ln(2)
 
     now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-
     add_row("Receipt Date:", now_str)
     add_row("Product:", data["title"])
     add_row("Amount Paid:", f"{data['price']} {data['currency']}")
     add_row("Buyer Wallet:", data["buyer_wallet"])
     add_row("Seller Wallet:", data["sellerWallet"])
     add_row("Transaction Hash:", data["tx_hash"])
-
     if data.get("commission"):
-        add_row(
-            "Platform Commission:",
-            f"{data['commission']} {data['currency']} (paid by seller)"
-        )
+        add_row("Platform Commission:", f"{data['commission']} {data['currency']} (paid by seller)")
 
     pdf.ln(4)
     pdf.line(15, pdf.get_y(), 195, pdf.get_y())
@@ -941,72 +926,56 @@ def send_receipt():
 
     pdf.set_text_color(*WHITE)
     pdf.set_font("Helvetica", size=11)
-    pdf.multi_cell(
-        0,
-        7,
-        "This document is provided for informational purposes only and serves as a "
-        "record of a completed blockchain transaction. It does not constitute a "
-        "legal agreement, contract, or proof of consent between the parties."
-    )
-
+    pdf.multi_cell(0, 7, "This document is provided for informational purposes only and serves as a record of a completed blockchain transaction. It does not constitute a legal agreement, contract, or proof of consent between the parties.")
     pdf.ln(3)
     pdf.set_font("Helvetica", style="I", size=10)
-    pdf.multi_cell(
-        0,
-        6,
-        "User acknowledgements and consent selections are collected separately via "
-        "the platform interface at the time of payment and may be stored in platform "
-        "systems for audit or compliance purposes."
-    )
-
+    pdf.multi_cell(0, 6, "User acknowledgements and consent selections are collected separately via the platform interface at the time of payment and may be stored in platform systems for audit or compliance purposes.")
     pdf.ln(4)
     pdf.set_font("Helvetica", size=10)
-    pdf.multi_cell(
-        0,
-        6,
-        "Cryptocurrency transactions are irreversible and may involve technical "
-        "or market risks. Users are responsible for reviewing all applicable "
-        "platform documentation prior to initiating a transaction."
-    )
-
+    pdf.multi_cell(0, 6, "Cryptocurrency transactions are irreversible and may involve technical or market risks. Users are responsible for reviewing all applicable platform documentation prior to initiating a transaction.")
     pdf.ln(8)
     pdf.set_text_color(*CYAN)
     pdf.set_font("Helvetica", style="I", size=9)
-    pdf.cell(
-        0,
-        6,
-        "Powered by Neonflick-bps - Blockchain transaction record",
-        align="C"
-    )
+    pdf.cell(0, 6, "Powered by Neonflick-bps - Blockchain transaction record", align="C")
 
     pdf_buffer = io.BytesIO()
     pdf.output(pdf_buffer)
     pdf_buffer.seek(0)
 
+    # --- Відправка через Mailjet ---
     try:
-        msg = Message(
-            subject="Your Neonflick Payment Receipt",
-            recipients=[data["email"]],
-            body="Please find attached your electronic payment receipt."
-        )
-        msg.attach(
-            "e-receipt.pdf",
-            "application/pdf",
-            pdf_buffer.read()
-        )
-        mail.send(msg)
+        import base64
+        pdf_base64 = base64.b64encode(pdf_buffer.read()).decode()
 
-        return jsonify({
-            "status": "success",
-            "message": "Receipt sent to email"
-        }), 200
+        data_mailjet = {
+            "Messages": [
+                {
+                    "From": {"Email": MAILJET_FROM_EMAIL, "Name": MAILJET_FROM_NAME},
+                    "To": [{"Email": data["email"]}],
+                    "Subject": "Your Neonflick Payment Receipt",
+                    "TextPart": "Please find attached your electronic payment receipt.",
+                    "Attachments": [
+                        {
+                            "ContentType": "application/pdf",
+                            "Filename": "e-receipt.pdf",
+                            "Base64Content": pdf_base64
+                        }
+                    ]
+                }
+            ]
+        }
+
+        result = mailjet.send.create(data=data_mailjet)
+        if result.status_code != 200:
+            print("Mailjet send failed:", result.status_code, result.json())
+            return jsonify({"status": "error", "message": "Failed to send email"}), 500
+
+        return jsonify({"status": "success", "message": "Receipt sent to email"}), 200
 
     except Exception as e:
-        print("Email send failed:", e)
-        return jsonify({
-            "status": "error",
-            "message": "Failed to send email"
-        }), 500
+        print("Mailjet send exception:", e)
+        return jsonify({"status": "error", "message": "Failed to send email"}), 500
+
 
 
 if __name__ == "__main__":

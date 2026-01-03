@@ -9,4 +9,4 @@ boto3
 PyJWT==2.8.0
 Werkzeug==2.3.7
 fpdf2==2.7.8
-Flask-Mail
+mailjet-rest

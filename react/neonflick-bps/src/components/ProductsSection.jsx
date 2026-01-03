@@ -108,7 +108,7 @@ const copyToClipboard = (text) => {
 const handleEdit = (product) => onEdit(product);
 
 const handleShare = (product) => {
-  const url = `https://neonflick-bps-production.up.railway.app/pay/${product.id}`;
+  const url = `https://neonflick-bps.vercel.app//pay/${product.id}`;
   navigator.clipboard.writeText(url).catch((err) => {
     console.error("Failed to copy link:", err);
     setNotification("Failed to copy link");

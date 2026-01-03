@@ -33,8 +33,8 @@ export default function App() {
     // 🔒 blocked wallet
     showBlockedModal,
     blockedWallet,
-    logout, // ⚡ використовується для очищення стану і localStorage
-    closeBlockedModal, // ⚡ ховає модалку
+    logout,
+    closeBlockedModal,
 
     // 📜 access consents
     showConsentModal,
@@ -100,8 +100,8 @@ export default function App() {
             <button
               type="button"
               onClick={() => {
-                logout();           // очищаємо localStorage і стан
-                closeBlockedModal(); // ховаємо модалку
+                logout();
+                closeBlockedModal();
               }}
             >
               OK

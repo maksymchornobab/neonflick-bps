@@ -29,7 +29,6 @@ export default function EditSection({ product, onCancel }) {
     };
   }, [imagePreview]);
 
-  // 🔹 Live калькуляція
   useEffect(() => {
     if (currency === "SOL" && price) {
       calculateCommission(price);

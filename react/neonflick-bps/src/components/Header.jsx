@@ -14,7 +14,6 @@ import {
 } from "@solana/wallet-adapter-wallets";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
-/* 🔹 Wallet ↔ Auth sync (НЕ впливає на UI кнопки) */
 function WalletAuthSync() {
   const { publicKey, connected } = useWallet();
   const { connectedWallet, loginWithWallet, logout } = useWalletAuth();
@@ -38,7 +37,7 @@ function WalletAuthSync() {
       wasConnectedRef.current = false;
 
       if (connectedWallet) {
-        logout(); // ❗ тільки auth logout
+        logout();
       }
     }
   }, [connected, publicKey, connectedWallet, loginWithWallet, logout]);
@@ -46,13 +45,13 @@ function WalletAuthSync() {
   return null;
 }
 
-/* 🔹 Stable Wallet UI (адреса завжди видна) */
+
 function WalletSection() {
   const { publicKey, connected } = useWallet();
 
   return (
     <div className="flex items-center gap-3">
-      {/* адреса — source of truth */}
+
       {connected && publicKey && (
         <div className="wallet-chip">
           {publicKey.toString().slice(0, 4)}...
@@ -60,14 +59,14 @@ function WalletSection() {
         </div>
       )}
 
-      {/* єдина кнопка */}
+
       <WalletMultiButton />
     </div>
   );
 }
 
 export default function Header({ activeSection, setActiveSection }) {
-  // ❗ adapters створюються ОДИН раз
+
   const wallets = useMemo(
     () => [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
     []

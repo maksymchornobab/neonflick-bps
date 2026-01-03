@@ -16,7 +16,6 @@ export default function SuccessModal({ txHash, product, buyerWallet }) {
     window.history.back();
   };
 
-  // ⏱ автоматичний reset підтвердження закриття
   useEffect(() => {
     if (!confirmClose) return;
 

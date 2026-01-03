@@ -8,22 +8,21 @@ export default function Notification({ message, onClose }) {
     if (onClose) onClose();
   };
 
-  // 🔹 Показуємо сповіщення при зміні message
+
   useEffect(() => {
     if (!message) return;
 
-    setVisible(true); // показати
+    setVisible(true);
 
     const timer = setTimeout(() => {
-      handleClose(); // через 7 секунд закриваємо так само, як на кнопку close
+      handleClose();
     }, 7000);
 
-    return () => clearTimeout(timer); // очищаємо таймер при unmount / новому message
+    return () => clearTimeout(timer);
   }, [message]);
 
   if (!visible || !message) return null;
 
-  // 🔹 Визначаємо текст для відображення
   const displayMessage =
     typeof message === "object" && message !== null
       ? message.message || JSON.stringify(message)

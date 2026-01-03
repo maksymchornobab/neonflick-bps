@@ -6,16 +6,16 @@ export default function TermsAndConditions() {
   const navigate = useNavigate();
 
   const handleSectionChange = (section) => {
-    navigate("/"); // переход на дашборд
-    localStorage.setItem("initialSection", section); // можна зберегти, щоб дашборд відкрив потрібну секцію
+    navigate("/");
+    localStorage.setItem("initialSection", section);
   };
 
   return (
     <>
       {/* Header використовується як shared layout */}
       <Header
-              activeSection="products" // передамо будь-яку секцію як дефолт
-              setActiveSection={handleSectionChange} // кнопки тепер працюють
+              activeSection="products"
+              setActiveSection={handleSectionChange}
             />
 
       <main className="legal-page">

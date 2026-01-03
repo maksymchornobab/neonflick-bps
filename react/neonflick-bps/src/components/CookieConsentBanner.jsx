@@ -21,7 +21,6 @@ export default function CookieConsentModal() {
 
   if (!showModal && !declined) return null;
 
-  // Повідомлення при Decline (full screen)
   if (declined) {
     return (
       <div className="cookie-decline-overlay">
@@ -33,7 +32,6 @@ export default function CookieConsentModal() {
     );
   }
 
-  // Modal для Accept / Decline (centered)
   return (
     <div className="cookie-modal-backdrop">
       <div className="cookie-modal">

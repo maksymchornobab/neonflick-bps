@@ -21,7 +21,6 @@ export default function ProductsSection({ onEdit }) {
   const [openInfoId, setOpenInfoId] = useState(null);
   const [txOverlayId, setTxOverlayId] = useState(null);
 
-  // 🔹 Для кожного продукту окремо зберігати, чи показувати Delete Overlay
   const [deleteOverlayIds, setDeleteOverlayIds] = useState([]);
 
   /* ================= FETCH ================= */
@@ -131,7 +130,6 @@ const handleDelete = async (ids) => {
       setNotification("Some products could not be deleted");
     }
 
-    // якщо видалились продукти — просто оновлюємо стан без сповіщення
     if (data.deleted?.length) {
       setProducts((prev) => prev.filter((p) => !data.deleted.includes(p.id)));
       setSelectedProducts((prev) =>

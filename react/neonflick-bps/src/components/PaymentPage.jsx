@@ -72,7 +72,6 @@ function PaymentPage() {
     const res = await fetch(`http://127.0.0.1:5000/api/pay/${productId}`);
 
     if (!res.ok) {
-      // 🔹 замість HTML показуємо тільки просте повідомлення
       setError("Product is unavailable or expired");
       return;
     }
@@ -151,7 +150,6 @@ function PaymentPage() {
       } else {
         const text = await res.text().catch(() => "");
         if (text) {
-          // Витягуємо текст без HTML тегів
           msg = text.replace(/<\/?[^>]+(>|$)/g, "").trim();
         }
       }
@@ -255,7 +253,6 @@ function PaymentPage() {
 
   } catch (err) {
     console.error(err);
-    // Повідомлення без HTML
     let cleanMsg = (err.message || "").replace(/<\/?[^>]+(>|$)/g, "").trim();
     if (!cleanMsg) cleanMsg = "Payment failed due to an unexpected error. Please try again.";
     setNotification(cleanMsg);

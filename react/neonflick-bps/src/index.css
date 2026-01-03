@@ -159,7 +159,7 @@ body {
     inset 0 0 10px rgba(255, 80, 80, 0.15);
 }
 
-/* Клас visible ставимо через React state */
+
 .wallet-disconnect.visible {
   opacity: 1;
   pointer-events: auto;
@@ -189,7 +189,7 @@ body {
 
 #create {
   position: relative;
-  min-height: calc(100vh - 80px); /* якщо є хедер */
+  min-height: calc(100vh - 80px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -250,7 +250,7 @@ body {
 .img-btn {
   position: absolute;
   top: 50%;
-  transform: translateY(-50%); /* 🔑 вертикальний центр */
+  transform: translateY(-50%);
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -269,7 +269,7 @@ body {
 }
 
 .img-btn.replace {
-  right: 52px; /* 👉 відступ від правого краю label */
+  right: 52px;
   background-image: url("components/img/change.png");
 }
 
@@ -337,17 +337,17 @@ body {
   font-size: 0.8rem;
   color: #00ffff;
   font-family: monospace;
-  pointer-events: none; /* щоб не заважав клікам */
+  pointer-events: none;
 }
 
 .char-counter1 {
   position: absolute;
-  top: 101px; /* над полем */
+  top: 101px;
   right: -74px;
   font-size: 0.8rem;
   color: #00ffff;
   font-family: monospace;
-  pointer-events: none; /* щоб не заважав клікам */
+  pointer-events: none;
 }
 
 .commission-word {
@@ -599,7 +599,7 @@ body {
   height: 260px;
   border-top-left-radius: 28px;
   border-top-right-radius: 28px;
-  background-color: #111; /* fallback фон */
+  background-color: #111;
   
   display: flex;
   align-items: center;
@@ -607,12 +607,12 @@ body {
   overflow: hidden;
 }
 
-/* Картинка всередині */
+
 .product-image {
   width: 100%;
   height: 100%;
-  object-fit: cover;       /* повністю заповнює рамку */
-  object-position: center; /* центрована по X і Y */
+  object-fit: cover;
+  object-position: center;
   display: block;
 }
 
@@ -620,7 +620,7 @@ body {
 .product-content {
   display: flex;
   flex-direction: column;
-  flex: 1;               /* ⬅️ займає залишок */
+  flex: 1;
   padding: 18px;
 }
 
@@ -635,9 +635,9 @@ body {
   font-size: 1.2rem;
   margin-bottom: 6px;
 
-  white-space: nowrap;        /* один рядок */
+  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;    /* ... */
+  text-overflow: ellipsis;
 }
 
 
@@ -646,14 +646,14 @@ body {
   font-size: 0.9rem;
   line-height: 1.4;
 
-  display: -webkit-box;       /* Для WebKit (Chrome, Safari, Edge) */
+  display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;      /* максимум 2 рядки */
+  -webkit-line-clamp: 2;
 
-  display: box;               /* fallback для старих браузерів */
+  display: box;
   box-orient: vertical;
 
-  line-clamp: 2;              /* стандартна властивість для майбутньої сумісності */
+  line-clamp: 2;
 
   overflow: hidden;
   text-overflow: ellipsis;
@@ -678,11 +678,11 @@ body {
   opacity: 0.6;
 }
 
-/* Таймер відліку на продукті - активний неоновий стиль */
+
 .product-timer {
   display: inline-block;
-  background-color: #00ffff; /* яскравий бірюзовий */
-  color: #000; /* контрастний текст */
+  background-color: #00ffff;
+  color: #000;
   font-weight: bold;
   font-size: 0.85rem;
   padding: 3px 8px;
@@ -692,21 +692,20 @@ body {
   text-align: center;
   min-width: 60px;
   
-  /* Неоновий ефект */
   box-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff, 0 0 15px #00ffff, 0 0 20px #00ffff;
   text-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff;
   transition: box-shadow 0.3s, text-shadow 0.3s;
 }
 
-/* Якщо таймер сплив */
+
 .product-timer.expired {
-  background-color: rgba(128, 128, 128, 0.8); /* сірий */
+  background-color: rgba(128, 128, 128, 0.8);
   color: #fff;
   box-shadow: none;
   text-shadow: none;
 }
 
-/* Позиціонування у нижній частині картки */
+
 .product-card .product-footer + .product-timer {
   display: block;
   margin-top: 11px;
@@ -714,7 +713,7 @@ body {
 
 /* BUTTON */
 .product-button {
-  margin-top: auto;      /* ⬅️ ПРАЦЮЄ ТЕПЕР */
+  margin-top: auto;
   padding: 14px;
   border-radius: 14px;
   border: 1px solid var(--neon);
@@ -742,16 +741,16 @@ body {
   display: none;
   position: relative;
   z-index: 1;
-  width: 36px;            /* ширина круга */
-  height: 36px;           /* висота круга */
+  width: 36px;            
+  height: 36px;           
   background: #111;
   color: #00ffff;
   border: 1px solid #00ffff;
-  border-radius: 50%;     /* робимо круглим */
+  border-radius: 50%;     
   font-size: 20px;
   display: flex;
-  align-items: center;    /* центр вертикально */
-  justify-content: center;/* центр горизонтально */
+  align-items: center;    
+  justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 0 6px rgba(0, 255, 255, 0.5);
@@ -765,7 +764,7 @@ body {
 
 .dots-menu {
   position: absolute;
-  bottom: 46px; /* піднімаємо трохи над кнопкою */
+  bottom: 46px;
   right: 0;
   background: #111;
   border: 1px solid #00ffff;
@@ -1001,9 +1000,9 @@ body {
 
 .notification {
   position: fixed;
-  top: 80px; /* відступ від верху */
-  left: 40%; /* по горизонталі центр */
-  transform: translateX(-50%); /* зміщуємо на половину ширини для точного центру */
+  top: 80px;
+  left: 40%;
+  transform: translateX(-50%);
   
   background: rgb(0, 0, 0);
   border: 1px solid #00ffff;
@@ -1016,11 +1015,11 @@ body {
   box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
   
   display: flex;
-  flex-direction: column; /* span зверху, кнопка внизу */
+  flex-direction: column;
   justify-content: space-between;
   
   min-width: 250px;
-  max-width: 90vw; /* не виходить за межі екрана */
+  max-width: 90vw;
   
   z-index: 9999;
   animation: fadeInOut 7s forwards;
@@ -1028,11 +1027,11 @@ body {
 
 
 .notification span {
-  margin-bottom: 8px; /* відступ до кнопки */
+  margin-bottom: 8px;
 }
 
 .close-btn {
-  align-self: flex-end; /* розташування внизу справа */
+  align-self: flex-end;
   background: none;
   border: none;
   color: #00ffff;
@@ -1049,28 +1048,25 @@ body {
   100% { opacity: 0; transform: translateY(-20px); }
 }
 
-/* Панель управління — рамка і центр */
 .products-panel {
   display: flex;
-  justify-content: center; /* центр по горизонталі */
+  justify-content: center;
   gap: 20px;
   margin-bottom: 20px;
   align-items: center;
   flex-wrap: wrap;
-  border: 2px solid #00ffff; /* рамка */
+  border: 2px solid #00ffff;
   border-radius: 12px;
-  padding: 15px 20px; /* внутрішній відступ */
-  background-color: rgba(0, 255, 255, 0.05); /* легкий футуристичний фон */
+  padding: 15px 20px;
+  background-color: rgba(0, 255, 255, 0.05);
 }
 
-/* Gap між кнопками у choose-section */
 .choose-section {
   display: flex;
   gap: 10px;
   align-items: center;
 }
 
-/* Стиль для кнопок, селектів та інпутів */
 .choose-section button,
 .sort-section select,
 .search-section input {
@@ -1089,25 +1085,21 @@ body {
   background: rgba(0, 255, 255, 0.1);
 }
 
-/* Поле пошуку */
 .search-section input {
   width: 435px;
 }
 
-/* Модальне положення для результатів пошуку */
 .search-section {
   position: relative;
   width: 63%;
 }
 
-/* Сортування */
 .sort-section {
   display: flex;
   gap: 10px;
   align-items: center;
 }
 
-/* Checkbox для вибору продукту — зліва вгорі */
 .choose-checkbox {
   position: absolute;
   top: 10px;
@@ -1115,29 +1107,26 @@ body {
   width: 18px;
   height: 18px;
   cursor: pointer;
-  z-index: 2; /* щоб був поверх картинки */
+  z-index: 2;
 }
 
-/* Обрана картка продукту — неонова рамка */
 .product-card.selected {
   border: 2px solid #00ffff;
   box-shadow: 0 0 12px #00ffff, 0 0 20px rgba(0, 255, 255, 0.5);
   position: relative;
 }
 
-/* Контейнер для дій гаманця */
 .wallet-action-container {
   position: absolute;
-  top: 50px; /* еквівалент top-10 */
+  top: 50px;
   right: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem; /* еквівалент gap-2 */
+  gap: 0.5rem;
   z-index: 50;
-  perspective: 1000px; /* додаємо глибину для 3D hover */
+  perspective: 1000px;
 }
 
-/* Базові стилі для кнопок дій */
 .wallet-action-btn {
   padding: 0.5rem 1rem;
   border-radius: 0.75rem;
@@ -1145,15 +1134,14 @@ body {
   font-size: 11px;
   cursor: pointer;
   transition: all 0.3s ease-in-out;
-  border: 2px solid #00ffff; /* обводка для футуристичного вигляду */
+  border: 2px solid #00ffff;
   text-transform: uppercase;
   letter-spacing: 1px;
   position: relative;
   overflow: hidden;
-  background-color: #0a0a0a; /* темний фон для обох кнопок */
+  background-color: #0a0a0a;
 }
 
-/* Subtle glow effect для кнопок */
 .wallet-action-btn::before {
   content: "";
   position: absolute;
@@ -1173,12 +1161,12 @@ body {
 /* Disconnect */
 .wallet-action-btn.disconnect {
   color: #00ffff;
-  border-color: #ef4444; /* червона обводка */
+  border-color: #ef4444;
   box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
 }
 
 .wallet-action-btn.disconnect:hover {
-  background-color: #1a0a0a; /* трохи світліший чорний при hover */
+  background-color: #1a0a0a;
   box-shadow: 0 0 20px rgba(239, 68, 68, 0.9), 0 0 40px rgba(255, 80, 80, 0.5);
   transform: translateY(-2px) scale(1.05) rotateX(2deg);
 }
@@ -1186,12 +1174,12 @@ body {
 /* Change Wallet */
 .wallet-action-btn.change-wallet {
   color: #00ffff;
-  border-color: #00ffff; /* класична обводка */
+  border-color: #00ffff;
   box-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
 }
 
 .wallet-action-btn.change-wallet:hover {
-  background-color: #1a0a0a; /* темний фон при hover */
+  background-color: #1a0a0a;
   box-shadow: 0 0 20px rgba(0, 255, 255, 0.9), 0 0 40px rgba(0, 255, 255, 0.5);
   transform: translateY(-2px) scale(1.05) rotateX(2deg);
 }
@@ -1314,15 +1302,13 @@ body {
   text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
 }
 
-/* Центрування обох вікон */
 .payment-page--double {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 20px; /* відстань між вікнами */
+  gap: 20px;
 }
 
-/* 💳 Окреме вікно для description */
 .payment-card__description-box {
   margin-top: 12px;
   padding: 16px;
@@ -1349,7 +1335,6 @@ body {
   pointer-events: auto;
 }
 
-/* Заголовок по центру */
 .payment-card--description h2 {
   text-align: center;
   color: #00ffff;
@@ -1368,7 +1353,6 @@ body {
   text-decoration: underline;
 }
 
-/* Скрол для повного опису */
 .payment-card__full-description {
   white-space: pre-wrap;
   font-size: 0.95rem;
@@ -1619,7 +1603,7 @@ body {
 
 .tx-overlay-header {
   display: flex;
-  justify-content: center; /* заголовок по центру */
+  justify-content: center;
   align-items: center;
   position: relative;
 }
@@ -1644,13 +1628,13 @@ body {
 .tx-overlay-content {
   overflow-y: auto;
   flex-grow: 1;
-  padding-right: 4px; /* щоб скрол не перекривав текст */
-  padding-left: 22px; /* відступ для нумерації */
-  list-style-type: decimal; /* цифри */
+  padding-right: 4px;
+  padding-left: 22px;
+  list-style-type: decimal;
 }
 
 .tx-overlay-content li {
-  margin-bottom: 4px; /* відстань між хешами */
+  margin-bottom: 4px;
   color: #00ffff;
   cursor: pointer;
   font-family: monospace;
@@ -1822,8 +1806,7 @@ body {
   text-decoration: underline;
 }
 
-/* Банер (не на весь екран) */
-/* Backdrop для модального вікна */
+
 .cookie-modal-backdrop {
   position: fixed;
   top: 0; left: 0;
@@ -1837,7 +1820,6 @@ body {
   font-family: 'Arial', sans-serif;
 }
 
-/* Саме модальне вікно */
 .cookie-modal {
   background-color: #0a0a0a;
   color: #00ffff;
@@ -1848,13 +1830,11 @@ body {
   box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
 }
 
-/* Посилання на Privacy Policy */
 .cookie-link {
   color: #00ffff;
   text-decoration: underline;
 }
 
-/* Кнопки Accept / Decline */
 .cookie-buttons {
   margin-top: 1.5rem;
   display: flex;
@@ -1882,7 +1862,6 @@ body {
   font-weight: bold;
 }
 
-/* Повноекранне повідомлення при Decline */
 .cookie-decline-overlay {
   position: fixed;
   top: 0; left: 0;
@@ -1936,8 +1915,8 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 9999;
-  padding: 1rem; /* щоб модалка не прилипала до країв на мобайлі */
-  overflow-y: auto; /* дозвіл скролу, якщо модалка занадто висока */
+  padding: 1rem;
+  overflow-y: auto;
 }
 
 /* Modal box */
@@ -1948,8 +1927,8 @@ body {
   padding: 2rem;
   width: 90%;
   max-width: 500px;
-  max-height: 90vh; /* обмежує висоту модалки */
-  overflow-y: auto; /* додаємо прокрутку всередині модалки */
+  max-height: 90vh;
+  overflow-y: auto;
   text-align: center;
   box-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff inset;
   animation: glow 1.5s infinite alternate;
@@ -1978,7 +1957,7 @@ body {
   color: #ffffff;
   font-family: "Courier New", Courier, monospace;
   margin-bottom: 1rem;
-  word-break: break-word; /* щоб довгі адреси гаманців переносились */
+  word-break: break-word;
 }
 
 /* Button */

@@ -6,7 +6,6 @@ module.exports = {
       webpackConfig.resolve.fallback = {
         ...webpackConfig.resolve.fallback,
 
-        // ✅ браузерні polyfills
         crypto: require.resolve("crypto-browserify"),
         stream: require.resolve("stream-browserify"),
         buffer: require.resolve("buffer/"),
@@ -21,7 +20,6 @@ module.exports = {
         constants: require.resolve("constants-browserify"),
         querystring: require.resolve("querystring-es3"),
 
-        // ❌ Node-only модулі
         fs: false,
         child_process: false,
         worker_threads: false,

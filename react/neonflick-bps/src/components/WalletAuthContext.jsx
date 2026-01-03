@@ -61,7 +61,6 @@ export function WalletAuthProvider({ children }) {
 
       const data = await res.json();
 
-      // ❗ тільки access-level consents
       const hasTerms = data.terms === true;
       const hasRisk = data.crypto_risk_disclosure === true;
 

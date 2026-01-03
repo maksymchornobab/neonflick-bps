@@ -31,7 +31,6 @@ export default function CreateSection() {
   const [wallet, setWallet] = useState(null);
   const [showCommissionTable, setShowCommissionTable] = useState(false);
 
-  // 🔹 Нова логіка Terms + Crypto Risk
   const [termsConsent, setTermsConsent] = useState(false);
   const [riskConsent, setRiskConsent] = useState(false);
   const [showConsentModal, setShowConsentModal] = useState(false);
@@ -249,7 +248,7 @@ const handleSubmit = async (e) => {
       throw new Error(data.message || "Error creating product.");
     }
 
-    // ✅ тільки успіх при створенні продукту
+
     setNotification("Product created successfully!");
     handleRemoveImage();
     setTitle("");
@@ -272,7 +271,7 @@ const handleSubmit = async (e) => {
   }
 };
 
-// 🔹 Логіка для модалки
+
 const handleConsentAgree = async () => {
   try {
     await submitConsent("terms");

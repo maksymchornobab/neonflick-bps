@@ -24,7 +24,7 @@ load_dotenv()
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("JWT_SECRET")
 
-CORS(app, supports_credentials=True, origins="*")
+CORS(app, supports_credentials=True, origins=["https://neonflick-bps.vercel.app"])
 
 db_password = os.getenv("DB_PASSWORD")
 uri = f"mongodb+srv://neonflick-bps:{db_password}@cluster0.mhunksj.mongodb.net/?appName=Cluster0"

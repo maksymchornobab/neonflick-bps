@@ -53,7 +53,7 @@ PLATFORM_WALLET_SOL = os.getenv("PLATFORM_WALLET_ADDRESS_SOL")
 SOLANA_NETWORK = os.getenv("SOLANA_NETWORK")
 
 app.config.update(
-    MAIL_SERVER="smtp.example.com",
+    MAIL_SERVER="smtp.gmail.com",
     MAIL_PORT=587,
     MAIL_USE_TLS=True,
     MAIL_USERNAME=os.getenv("MAIL_USERNAME"),
@@ -838,9 +838,8 @@ def add_product_transaction(product_id):
         "transaction": new_tx
     }), 200
 
-
-@app.route("/api/generate-receipt", methods=["POST"])
-def generate_receipt():
+@app.route("/api/send-receipt", methods=["POST"])
+def send_receipt():
     data = request.get_json()
 
     required_fields = [
@@ -851,7 +850,8 @@ def generate_receipt():
         "sellerWallet",
         "buyer_wallet",
         "tx_hash",
-        "image"
+        "image",
+        "email"
     ]
     missing = [f for f in required_fields if f not in data]
     if missing:
@@ -872,7 +872,14 @@ def generate_receipt():
 
     pdf.set_text_color(*CYAN)
     pdf.set_font("Helvetica", style="B", size=18)
-    pdf.cell(0, 12, "Electronic Payment Receipt", align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.cell(
+        0,
+        12,
+        "Electronic Payment Receipt",
+        align="C",
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT
+    )
     pdf.ln(6)
 
     pdf.line(15, pdf.get_y(), 195, pdf.get_y())
@@ -976,112 +983,6 @@ def generate_receipt():
     pdf.output(pdf_buffer)
     pdf_buffer.seek(0)
 
-    return send_file(
-        pdf_buffer,
-        as_attachment=True,
-        download_name="e-receipt.pdf",
-        mimetype="application/pdf"
-    )
-
-@app.route("/api/send-receipt", methods=["POST"])
-def send_receipt():
-    data = request.get_json()
-
-    required_fields = [
-        "product_id",
-        "title",
-        "price",
-        "currency",
-        "sellerWallet",
-        "buyer_wallet",
-        "tx_hash",
-        "image",
-        "email"
-    ]
-    missing = [f for f in required_fields if f not in data]
-    if missing:
-        return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
-
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_fill_color(0, 0, 0)
-    pdf.rect(0, 0, pdf.w, pdf.h, "F")
-    pdf.set_auto_page_break(auto=True, margin=15)
-
-    CYAN = (0, 255, 255)
-    WHITE = (255, 255, 255)
-    pdf.set_draw_color(*CYAN)
-    pdf.set_font("Helvetica", size=12)
-
-    pdf.set_text_color(*CYAN)
-    pdf.set_font("Helvetica", style="B", size=18)
-    pdf.cell(0, 12, "Electronic Payment Receipt", align="C")
-    pdf.ln(6)
-
-    pdf.line(15, pdf.get_y(), 195, pdf.get_y())
-    pdf.ln(8)
-
-    try:
-        response = requests.get(data["image"], timeout=5)
-        response.raise_for_status()
-        img_buffer = io.BytesIO(response.content)
-        img_width = 100
-        img_height = 60
-        x_pos = (pdf.w - img_width) / 2
-        y_pos = pdf.get_y()
-        pdf.image(img_buffer, x=x_pos, y=y_pos, w=img_width, h=img_height)
-        pdf.rect(x_pos, y_pos, img_width, img_height)
-        pdf.ln(img_height + 6)
-    except Exception:
-        pass
-
-    page_width = pdf.w - 2 * pdf.l_margin
-    label_width = 55
-
-    def add_row(label, value):
-        pdf.set_text_color(*CYAN)
-        pdf.set_font("Helvetica", style="B", size=12)
-        pdf.cell(label_width, 8, label, new_x=XPos.RIGHT, new_y=YPos.TOP)
-        pdf.set_text_color(*WHITE)
-        pdf.set_font("Helvetica", size=12)
-        pdf.multi_cell(page_width - label_width, 8, str(value))
-        pdf.ln(2)
-
-    now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-    add_row("Receipt Date:", now_str)
-    add_row("Product:", data["title"])
-    add_row("Amount Paid:", f"{data['price']} {data['currency']}")
-    add_row("Buyer Wallet:", data["buyer_wallet"])
-    add_row("Seller Wallet:", data["sellerWallet"])
-    add_row("Transaction Hash:", data["tx_hash"])
-    if data.get("commission"):
-        add_row(
-            "Platform Commission:",
-            f"{data['commission']} {data['currency']} (paid by seller)"
-        )
-
-    pdf.ln(4)
-    pdf.line(15, pdf.get_y(), 195, pdf.get_y())
-    pdf.ln(6)
-
-    pdf.set_text_color(*WHITE)
-    pdf.set_font("Helvetica", size=11)
-    pdf.multi_cell(0, 7, "This document is provided for informational purposes only...")
-    pdf.ln(3)
-    pdf.set_font("Helvetica", style="I", size=10)
-    pdf.multi_cell(0, 6, "User acknowledgements and consent selections are collected separately...")
-    pdf.ln(4)
-    pdf.set_font("Helvetica", size=10)
-    pdf.multi_cell(0, 6, "Cryptocurrency transactions are irreversible and may involve technical or market risks.")
-    pdf.ln(8)
-    pdf.set_text_color(*CYAN)
-    pdf.set_font("Helvetica", style="I", size=9)
-    pdf.cell(0, 6, "Powered by Neonflick-bps - Blockchain transaction record", align="C")
-
-    pdf_buffer = io.BytesIO()
-    pdf.output(pdf_buffer)
-    pdf_buffer.seek(0)
-
     try:
         msg = Message(
             subject="Your Neonflick Payment Receipt",
@@ -1094,11 +995,18 @@ def send_receipt():
             pdf_buffer.read()
         )
         mail.send(msg)
-        return jsonify({"status": "success", "message": "Receipt sent to email"}), 200
+
+        return jsonify({
+            "status": "success",
+            "message": "Receipt sent to email"
+        }), 200
+
     except Exception as e:
         print("Email send failed:", e)
-        return jsonify({"status": "error", "message": "Failed to send email"}), 500
-
+        return jsonify({
+            "status": "error",
+            "message": "Failed to send email"
+        }), 500
 
 
 if __name__ == "__main__":

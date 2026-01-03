@@ -4,14 +4,14 @@ import { useWallet } from "@solana/wallet-adapter-react";
 export default function SuccessModal({ txHash, product, buyerWallet }) {
   const solscanUrl = `https://solscan.io/tx/${txHash}?cluster=mainnet`;
   const { publicKey } = useWallet();
-
-  const [confirmClose, setConfirmClose] = useState(false);
-  const [receiptSaved, setReceiptSaved] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
   const BACKEND = process.env.REACT_APP_BACKEND;
 
-  // нове: блокування кнопок на 15 секунд
+  const [confirmClose, setConfirmClose] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
   const [actionDisabled, setActionDisabled] = useState(false);
+
+  const [showEmailInput, setShowEmailInput] = useState(false);
+  const [email, setEmail] = useState("");
 
   const handleClose = () => {
     if (!confirmClose) {
@@ -23,16 +23,9 @@ export default function SuccessModal({ txHash, product, buyerWallet }) {
 
   useEffect(() => {
     if (!confirmClose) return;
-
-    const timer = setTimeout(() => {
-      setConfirmClose(false);
-    }, 3000);
-
+    const timer = setTimeout(() => setConfirmClose(false), 3000);
     return () => clearTimeout(timer);
   }, [confirmClose]);
-
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  const isPhantomMobile = window.solana?.isPhantom && isMobile;
 
   const receiptData = product
     ? {
@@ -41,7 +34,6 @@ export default function SuccessModal({ txHash, product, buyerWallet }) {
         price: product.price,
         currency: product.currency,
         commission: product.commission || 0,
-        description: product.description,
         sellerWallet: product.wallet,
         buyer_wallet: buyerWallet || publicKey?.toString(),
         tx_hash: txHash,
@@ -54,65 +46,34 @@ export default function SuccessModal({ txHash, product, buyerWallet }) {
     setTimeout(() => setActionDisabled(false), 15000);
   };
 
-  const handleDownloadPDF = async () => {
-    if (actionDisabled) return;
-    disableActions();
-
-    try {
-      if (!receiptData) throw new Error("Product data not available");
-
-      const res = await fetch(
-        `${BACKEND}/api/generate-receipt`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(receiptData),
-        }
-      );
-
-      if (!res.ok) throw new Error("Failed to generate PDF");
-
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "e-receipt.pdf";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-
-      setReceiptSaved(true);
-    } catch (err) {
-      console.error(err);
-      alert("Could not download e-receipt: " + err.message);
-    }
-  };
-
   const handleSendEmail = async () => {
     if (actionDisabled) return;
+
+    if (!showEmailInput) {
+      setShowEmailInput(true);
+      return;
+    }
+
+    if (!email || !email.includes("@")) {
+      alert("Please enter a valid email");
+      return;
+    }
+
     disableActions();
 
     try {
       if (!receiptData) throw new Error("Product data not available");
 
-      const email = prompt("Enter your email to receive the e-receipt:");
-      if (!email) return;
-
-      const res = await fetch(
-        `${BACKEND}/api/send-receipt`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...receiptData, email }),
-        }
-      );
+      const res = await fetch(`${BACKEND}/api/send-receipt`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...receiptData, email }),
+      });
 
       if (!res.ok) throw new Error("Failed to send e-receipt");
 
       setEmailSent(true);
-      alert("E-receipt sent to your email!");
+      setShowEmailInput(false);
     } catch (err) {
       console.error(err);
       alert("Could not send e-receipt: " + err.message);
@@ -134,58 +95,44 @@ export default function SuccessModal({ txHash, product, buyerWallet }) {
           Check the transaction
         </a>
 
-        {!receiptSaved && !emailSent ? (
+        {!emailSent ? (
           <div className="receipt-warning">
             <span className="warning-icon">⚠️</span>
-            <div>
-              <strong>Important:</strong>
-              <p>
-                Please save your <b>e-receipt</b>. This document is your official proof of payment.
-              </p>
-            </div>
+            <p>
+              Please send your <b>e-receipt</b> to email.  
+              This document is your official proof of payment.
+            </p>
           </div>
         ) : (
           <div className="receipt-success">
             <span className="success-icon-small">✓</span>
-            <p>
-              {emailSent
-                ? "E-receipt successfully sent to email"
-                : "E-receipt successfully saved"}
-            </p>
+            <p>E-receipt successfully sent to email</p>
           </div>
         )}
 
         <div className="success-actions">
-          {isPhantomMobile ? (
-            <button
-              className="btn-send"
-              onClick={handleSendEmail}
-              disabled={actionDisabled}
-            >
-              Send the e-receipt to E-mail
-            </button>
-          ) : (
-            <>
-              <button
-                className="btn-secondary"
-                onClick={handleDownloadPDF}
-                disabled={actionDisabled}
-              >
-                Save e-receipt
-              </button>
-              <button
-                className="btn-send"
-                onClick={handleSendEmail}
-                disabled={actionDisabled}
-              >
-                Send the e-receipt to E-mail
-              </button>
-            </>
+          <button
+            className="btn-send"
+            onClick={handleSendEmail}
+            disabled={actionDisabled}
+          >
+            {showEmailInput ? "Confirm & Send" : "Send the e-receipt to E-mail"}
+          </button>
+
+          {showEmailInput && (
+            <input
+              type="email"
+              className="email-input"
+              placeholder="your@email.com"
+              maxLength={100}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
           )}
 
           <button
             className={`btn-primary ${
-              confirmClose ? "danger" : !receiptSaved && !emailSent ? "warning" : ""
+              confirmClose ? "danger" : !emailSent ? "warning" : ""
             }`}
             onClick={handleClose}
           >

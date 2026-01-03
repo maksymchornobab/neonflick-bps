@@ -1559,8 +1559,7 @@ body {
   gap: 14px;
 }
 
-.btn-primary,
-.btn-secondary {
+.btn-primary {
   width: 100%;
   padding: 14px;
   border-radius: 12px;
@@ -1579,15 +1578,53 @@ body {
   box-shadow: 0 0 20px rgba(0, 255, 255, 0.9);
 }
 
-.btn-secondary {
-  background: transparent;
-  border: 1px solid #00ffff;
+.btn-send {
+  margin-top: 14px;
+  padding: 14px 22px;
+  font-size: 15px;
+  font-weight: 600;
   color: #00ffff;
+  background: rgba(0, 255, 255, 0.08);
+  border: 1px solid #00ffff;
+  border-radius: 10px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: all 0.25s ease;
+  box-shadow: 0 0 12px rgba(0, 255, 255, 0.35);
 }
 
-.btn-secondary:hover {
-  background: rgba(0, 255, 255, 0.1);
+.btn-send:hover:not(:disabled) {
+  background: rgba(0, 255, 255, 0.18);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.7);
+  transform: translateY(-1px);
 }
+
+.btn-send:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.email-input {
+  margin-top: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  background: #050505;
+  border: 1px solid #00ffff;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 14px;
+  outline: none;
+  box-shadow: inset 0 0 10px rgba(0, 255, 255, 0.25);
+}
+
+.email-input::placeholder {
+  color: rgba(0, 255, 255, 0.5);
+}
+
+.email-input:focus {
+  box-shadow: 0 0 14px rgba(0, 255, 255, 0.7);
+}
+
 
 .tx-overlay {
   position: absolute;
@@ -2143,33 +2180,6 @@ body {
 .p-block {
   color: #00ffff;
   font-weight: bold;
-}
-
-.btn-send {
-  background: #000;
-  color: #00ffff;
-  border: 2px solid #00ffff;
-  padding: 10px 20px;
-  font-size: 14px;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 30px #00ffff;
-}
-
-.btn-send:hover {
-  background: #00ffff;
-  color: #000;
-  box-shadow: 0 0 20px #00ffff, 0 0 30px #00ffff, 0 0 40px #00ffff;
-}
-
-.btn-send:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  box-shadow: none;
 }
 
 

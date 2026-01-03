@@ -66,7 +66,8 @@ export default function PrivacyPolicy() {
     </li>
     <li>
       <strong>Transaction information:</strong> transaction hash (tx_hash);
-      buyer wallet address used temporarily for receipt generation (not stored)
+      buyer wallet address used temporarily for receipt generation (not stored);
+      e-mail address used temporarily to send the receipt (not stored);
     </li>
     <li>
       <strong>Consent records:</strong> records of user consents provided on the

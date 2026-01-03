@@ -59,7 +59,8 @@ function PaymentPage() {
   const [consentChecked, setConsentChecked] = useState(false);
 
   const RPC_URL = process.env.REACT_APP_SOLANA_RPC;
-  
+  const BACKEND = process.env.REACT_APP_BACKEND;
+
   const connection = useMemo(
     () => new Connection(RPC_URL, "confirmed"),
     []
@@ -69,7 +70,7 @@ function PaymentPage() {
   useEffect(() => {
     const fetchPaymentData = async () => {
   try {
-    const res = await fetch(`https://neonflick-bps-production.up.railway.app/api/pay/${productId}`);
+    const res = await fetch(`${BACKEND}/api/pay/${productId}`);
 
     if (!res.ok) {
       setError("Product is unavailable or expired");
@@ -132,7 +133,7 @@ function PaymentPage() {
     setNotification("Preparing transaction. Please wait…");
 
     // ---------- PREPARE TRANSACTION (BACKEND) ----------
-    const res = await fetch("https://neonflick-bps-production.up.railway.app/api/pay/prepare/sol", {
+    const res = await fetch(`${BACKEND}/api/pay/prepare/sol`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -227,7 +228,7 @@ function PaymentPage() {
     const timestamps = consentNames.map(() => now);
 
     const backendRes = await fetch(
-      `https://neonflick-bps-production.up.railway.app/api/products/${product._id}/transaction`,
+      `${BACKEND}/api/products/${product._id}/transaction`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

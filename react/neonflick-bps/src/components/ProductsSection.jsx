@@ -22,6 +22,7 @@ export default function ProductsSection({ onEdit }) {
   const [txOverlayId, setTxOverlayId] = useState(null);
 
   const [deleteOverlayIds, setDeleteOverlayIds] = useState([]);
+  const BACKEND = process.env.REACT_APP_BACKEND;
 
   /* ================= FETCH ================= */
   useEffect(() => {
@@ -36,7 +37,7 @@ export default function ProductsSection({ onEdit }) {
   setLoading(true);
   try {
     const token = localStorage.getItem("jwt_token");
-    const res = await fetch("https://neonflick-bps-production.up.railway.app/products", {
+    const res = await fetch(`${BACKEND}/products`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
 
@@ -108,7 +109,7 @@ const copyToClipboard = (text) => {
 const handleEdit = (product) => onEdit(product);
 
 const handleShare = (product) => {
-  const url = `https://neonflick-bps.vercel.app/pay/${product.id}`;
+  const url = `${BACKEND}/pay/${product.id}`;
   
   navigator.clipboard.writeText(url)
     .then(() => {
@@ -125,7 +126,7 @@ const handleShare = (product) => {
 const handleDelete = async (ids) => {
   const productIds = Array.isArray(ids) ? ids : [ids];
   try {
-    const res = await fetch("https://neonflick-bps-production.up.railway.app/delete-products", {
+    const res = await fetch(`${BACKEND}/delete-products`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids: productIds }),

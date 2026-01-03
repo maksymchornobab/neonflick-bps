@@ -19,6 +19,7 @@ export default function EditSection({ product, onCancel }) {
   const [finalPrice, setFinalPrice] = useState(null); // ✅
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState("");
+  const BACKEND = process.env.REACT_APP_BACKEND;
 
   // 🔹 cleanup blob URL
   useEffect(() => {
@@ -47,7 +48,7 @@ const calculateCommission = async (priceValue) => {
     }
 
     const res = await fetch(
-      `https://neonflick-bps-production.up.railway.app/calculate_commission_sol?price=${priceValue}`
+      `${BACKEND}/calculate_commission_sol?price=${priceValue}`
     );
 
     if (!res.ok) {
@@ -124,7 +125,7 @@ const handleSubmit = async (e) => {
 
   // ---------- SEND REQUEST ----------
   try {
-    const res = await fetch("https://neonflick-bps-production.up.railway.app/update_product", {
+    const res = await fetch(`${BACKEND}/update_product`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: formData,

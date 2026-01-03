@@ -17,6 +17,7 @@ export function WalletAuthProvider({ children }) {
   // 📜 Terms + Crypto Risk modal
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [consentWallet, setConsentWallet] = useState(null);
+  const BACKEND = process.env.REACT_APP_BACKEND;
 
   // 🔁 Restore session
   useEffect(() => {
@@ -26,7 +27,7 @@ export function WalletAuthProvider({ children }) {
       return;
     }
 
-    fetch("https://neonflick-bps-production.up.railway.app/auth/me", {
+    fetch(`${BACKEND}/auth/me`, {
       headers: { Authorization: `Bearer ${savedToken}` },
     })
       .then((res) => (res.ok ? res.json() : null))
@@ -46,7 +47,7 @@ export function WalletAuthProvider({ children }) {
   const checkAccessConsents = async (wallet, jwt) => {
     try {
       const res = await fetch(
-        "https://neonflick-bps-production.up.railway.app/auth/consent/check",
+        `${BACKEND}/auth/consent/check`,
         {
           method: "POST",
           headers: {
@@ -76,7 +77,7 @@ export function WalletAuthProvider({ children }) {
   // 🔐 Login / Change wallet
   const loginWithWallet = async (publicKey) => {
     try {
-      const res = await fetch("https://neonflick-bps-production.up.railway.app/auth/wallet", {
+      const res = await fetch(`${BACKEND}/auth/wallet`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ wallet: publicKey }),

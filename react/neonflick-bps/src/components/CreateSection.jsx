@@ -36,6 +36,8 @@ export default function CreateSection() {
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [pendingSubmit, setPendingSubmit] = useState(null);
 
+  const BACKEND = process.env.REACT_APP_BACKEND;
+
   /* ---------------- INIT ---------------- */
   useEffect(() => {
     if (!token) return;
@@ -63,7 +65,7 @@ export default function CreateSection() {
   /* ---------------- API ---------------- */
   const fetchProducts = async () => {
   try {
-    const res = await fetch("https://neonflick-bps-production.up.railway.app/products", {
+    const res = await fetch(`${BACKEND}/products`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
 
@@ -83,7 +85,7 @@ const fetchMeAndConsents = async () => {
   try {
     setConsentsLoaded(false);
 
-    const meRes = await fetch("https://neonflick-bps-production.up.railway.app/auth/me", {
+    const meRes = await fetch(`${BACKEND}/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -102,7 +104,7 @@ const fetchMeAndConsents = async () => {
 
     setWallet(userWallet);
 
-    const consentRes = await fetch("https://neonflick-bps-production.up.railway.app/auth/consent/check", {
+    const consentRes = await fetch(`${BACKEND}/auth/consent/check`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ wallet: userWallet }),
@@ -134,7 +136,7 @@ const calculateCommission = async (priceValue) => {
       return;
     }
 
-    const res = await fetch(`https://neonflick-bps-production.up.railway.app/calculate_commission_sol?price=${priceValue}`);
+    const res = await fetch(`${BACKEND}/calculate_commission_sol?price=${priceValue}`);
     if (!res.ok) {
       throw new Error("Failed to calculate commission.");
     }
@@ -152,7 +154,7 @@ const calculateCommission = async (priceValue) => {
 
 const submitConsent = async (consentName) => {
   try {
-    const res = await fetch("https://neonflick-bps-production.up.railway.app/auth/consent", {
+    const res = await fetch(`${BACKEND}/auth/consent`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ wallet, consent: consentName }),
@@ -237,7 +239,7 @@ const handleSubmit = async (e) => {
     formData.append("currency", currency);
     formData.append("duration", duration);
 
-    const res = await fetch("https://neonflick-bps-production.up.railway.app/create_product", {
+    const res = await fetch(`${BACKEND}/create_product`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: formData,

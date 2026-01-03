@@ -10,11 +10,12 @@ export default function TermsConsentModal({
   const [terms, setTerms] = useState(false);
   const [risk, setRisk] = useState(false);
   const [loading, setLoading] = useState(false);
+  const BACKEND = process.env.REACT_APP_BACKEND;
 
   const canSubmit = terms && risk && !loading;
 
   const saveConsent = async (consent) => {
-    const res = await fetch("https://neonflick-bps-production.up.railway.app/auth/consent", {
+    const res = await fetch(`${BACKEND}/auth/consent`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

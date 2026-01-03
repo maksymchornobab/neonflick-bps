@@ -23,6 +23,7 @@ export default function ProductsSection({ onEdit }) {
 
   const [deleteOverlayIds, setDeleteOverlayIds] = useState([]);
   const BACKEND = process.env.REACT_APP_BACKEND;
+  const FRONTEND = process.env.REACT_APP_FRONTEND;
 
   /* ================= FETCH ================= */
   useEffect(() => {
@@ -109,7 +110,7 @@ const copyToClipboard = (text) => {
 const handleEdit = (product) => onEdit(product);
 
 const handleShare = (product) => {
-  const url = `${BACKEND}/pay/${product.id}`;
+  const url = `${FRONTEND}/pay/${product.id}`;
   
   navigator.clipboard.writeText(url)
     .then(() => {

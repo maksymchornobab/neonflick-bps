@@ -62,7 +62,6 @@ const calculateCommission = async (priceValue) => {
     console.error(err);
     setCommission(null);
     setFinalPrice(null);
-    setNotification(err.message || "Unable to calculate commission.");
   }
 };
 

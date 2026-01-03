@@ -1421,7 +1421,10 @@ body {
     border-radius: 4px;
     width: 336px;
     justify-content: center;
+
+    white-space: nowrap;
 }
+
 
 .payment-card__additional-toggle {
   padding: 10px 12px;
@@ -2156,7 +2159,8 @@ body {
   }
 
   .wallet-adapter-button {
-    width: 116px;
+    width: 118px;
+    font-size: 11px;
   }
 
   .choose-section button {

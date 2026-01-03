@@ -104,9 +104,17 @@ export default function SuccessModal({ txHash, product, buyerWallet }) {
             </p>
           </div>
         ) : (
-          <div className="receipt-success">
-            <span className="success-icon-small">✓</span>
-            <p>E-receipt successfully sent to email</p>
+          <div className="sucess-block">
+            <div className="receipt-success">
+             <span className="success-icon-small">✓</span>
+             <p>E-receipt successfully sent to email</p>
+            </div>
+            <div className="receipt-warning">
+             <span className="warning-icon">⚠️</span>
+              <p>
+               Check also your spam please, if you can't find in your Inbox.
+              </p>
+            </div>
           </div>
         )}
 

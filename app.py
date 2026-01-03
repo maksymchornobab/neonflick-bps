@@ -952,7 +952,7 @@ def send_receipt():
                 {
                     "From": {"Email": MAILJET_FROM_EMAIL, "Name": MAILJET_FROM_NAME},
                     "To": [{"Email": data["email"]}],
-                    "Subject": "Your Neonflick Payment Receipt",
+                    "Subject": "Your Neonflick-bps E-Payment Receipt",
                     "TextPart": "Please find attached your electronic payment receipt.",
                     "Attachments": [
                         {

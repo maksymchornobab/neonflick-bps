@@ -15,11 +15,11 @@ from bson.objectid import ObjectId
 import requests
 import time
 import threading
-from solana.rpc.api import Client
+from solana.rpc.api import Client as SolanaClient
 from solana.publickey import PublicKey
 from fpdf import FPDF
 from fpdf.enums import XPos, YPos
-from mailjet_rest import Client
+from mailjet_rest import Client as MailjetClient
 
 load_dotenv()
 app = Flask(__name__)
@@ -60,7 +60,7 @@ MAILJET_FROM_NAME = os.getenv("MAILJET_FROM_NAME")
 mj_api_key = os.getenv("MJ_APIKEY_PUBLIC")
 mj_api_secret = os.getenv("MJ_APIKEY_PRIVATE")
 
-mailjet = Client(auth=(mj_api_key, mj_api_secret), version="v3.1")
+mailjet = MailjetClient(auth=(mj_api_key, mj_api_secret), version="v3.1")
 
 
 # ---------------- HELPERS ----------------
@@ -750,7 +750,7 @@ def prepare_sol_transaction():
     seller = PublicKey(seller_wallet)
     platform = PublicKey(PLATFORM_WALLET_SOL)
 
-    client = Client(os.getenv("SOLANA_NETWORK"))
+    client = SolanaClient(os.getenv("SOLANA_NETWORK"))
     try:
         blockhash_resp = client.get_latest_blockhash()
         blockhash = str(blockhash_resp.value.blockhash)

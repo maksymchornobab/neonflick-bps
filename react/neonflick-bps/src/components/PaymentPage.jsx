@@ -227,7 +227,7 @@ function PaymentPage() {
     const timestamps = consentNames.map(() => now);
 
     const backendRes = await fetch(
-      `https://neonflick-bps-production.up.railway.app/products/${product._id}/transaction`,
+      `https://neonflick-bps-production.up.railway.app/api/products/${product._id}/transaction`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

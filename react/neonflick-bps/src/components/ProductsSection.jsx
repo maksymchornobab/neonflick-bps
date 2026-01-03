@@ -108,12 +108,19 @@ const copyToClipboard = (text) => {
 const handleEdit = (product) => onEdit(product);
 
 const handleShare = (product) => {
-  const url = `https://neonflick-bps.vercel.app//pay/${product.id}`;
-  navigator.clipboard.writeText(url).catch((err) => {
-    console.error("Failed to copy link:", err);
-    setNotification("Failed to copy link");
-  });
+  const url = `https://neonflick-bps.vercel.app/pay/${product.id}`;
+  
+  navigator.clipboard.writeText(url)
+    .then(() => {
+      // ✅ Сповіщення про успіх
+      setNotification("Link copied to clipboard!");
+    })
+    .catch((err) => {
+      console.error("Failed to copy link:", err);
+      setNotification("Failed to copy link");
+    });
 };
+
 
 const handleDelete = async (ids) => {
   const productIds = Array.isArray(ids) ? ids : [ids];

@@ -37,9 +37,13 @@ export default function LegalNotice() {
             <br />
             <strong>Website:</strong> <a href="https://neonflick-bps.xyz">https://neonflick-bps.xyz</a>
             <br />
-            <strong>Telegram Channel:</strong> "<a href="https://t.me/neon_flick">Neonflick</a>"
+            <strong>Neonflick's channel in Telegram:</strong> "<a href="https://t.me/neon_flick">Neonflick</a>"
             <br />
-            <strong>Neonflick Community in Telegram:</strong> <a href="https://t.me/neonflick_community">Neonflick Community</a>
+            <strong>Neonflick Community in Telegram:</strong> "<a href="https://t.me/neonflick_community">Neonflick Community</a>"
+            <br />
+            <strong>Neonflick's channel in X:</strong> "<a href="https://x.com/_neonflick_?s=21">Neonflick</a>"
+            <br />
+            <strong>Neonflick's channel in TikTok:</strong> "<a href="https://www.tiktok.com/@neon_flick?_r=1&_t=ZG-92ydOdoPL7Z">Neonflick</a>"
           </p>
         </section>
 

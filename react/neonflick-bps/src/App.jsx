@@ -21,6 +21,7 @@ import PlatformDisclaimer from "./legal/PlatformDisclaimer";
 import CryptoRiskDisclosure from "./legal/CryptoRiskDisclosure";
 import AbusePreventionStatement from "./legal/AbusePreventionStatement";
 import PaymentInstruction from "./howto/PaymentInstruction";
+import HowToUse from "./howto/HowToUse";
 
 import "./index.css";
 
@@ -134,10 +135,8 @@ export default function App() {
         <Route path="/legal/disclaimer" element={<PlatformDisclaimer />} />
         <Route path="/legal/crypto-risks" element={<CryptoRiskDisclosure />} />
         <Route path="/legal/aml" element={<AbusePreventionStatement />} />
-        <Route
-          path="/howto/payment-instruction"
-          element={<PaymentInstruction />}
-        />
+        <Route path="/howto/payment-instruction" element={<PaymentInstruction />} />
+        <Route path="/howto/how-to-use" element={<HowToUse />} />
 
         {/* 🏠 Dashboard */}
         <Route path="/*" element={<Dashboard />} />

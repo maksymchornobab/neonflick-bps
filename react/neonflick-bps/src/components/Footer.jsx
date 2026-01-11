@@ -20,6 +20,7 @@ export default function Footer() {
           <Link to="/legal/crypto-risks">Crypto Risk Disclosure</Link>
           <Link to="/legal/aml">AML & Abuse Policy</Link>
           <Link to="/howto/payment-instruction">Payment Instruction</Link>
+          <Link to="/howto/how-to-use">How to Use</Link>
         </nav>
       </div>
     </footer>

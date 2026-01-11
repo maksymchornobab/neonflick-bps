@@ -36,7 +36,9 @@ export default function LegalNotice() {
             <strong>Email:</strong> <a href="mailto:neonflickplatform@gmail.com">neonflickplatform@gmail.com</a>
             <br />
             <strong>Website:</strong> <a href="https://neonflick-bps.xyz">https://neonflick-bps.xyz</a>
+            <br />
             <strong>Telegram Channel:</strong> <a href="https://t.me/neon_flick">Neonflick</a>
+            <br />
             <strong>Neonflick Community in Telegram:</strong> <a href="https://t.me/neonflick_community">Neonflick Community</a>
           </p>
         </section>

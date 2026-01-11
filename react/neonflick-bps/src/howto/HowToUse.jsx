@@ -95,7 +95,7 @@ export default function PaymentInstruction() {
                 If you have a question, you can always reach us:
                 <ul>
                     <li>by E-mail: <a href="mailto:neonflickplatform@gmail.com">neonflickplatform@gmail.com</a></li>
-                    <li>ask in the <a href="https://t.me/neonflick_community">"Neonflick Community"</a> in Telegram:</li>
+                    <li>ask in the "<a href="https://t.me/neonflick_community">Neonflick Community</a>" in Telegram:</li>
                 </ul>
             </p>
         </section>
